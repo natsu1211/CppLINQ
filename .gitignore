@@ -27,3 +27,9 @@
 *.exe
 *.out
 *.app
+
+#visual studio
+*.db
+.vs
+x64
+x86
