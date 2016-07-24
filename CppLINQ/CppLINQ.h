@@ -12,16 +12,31 @@
 #include <memory>
 
 #include <utility>
-#ifdef _MSC_VER
-#include <xutility>
-#else
-#define __thiscall
-#endif
 
 namespace LL
 {
+	//excption
+	class linq_exception : public std::exception
+	{
+	public:
+		linq_exception()
+			:exception()
+		{
+		}
+
+		linq_exception(char const* const message)
+			:exception(message)
+		{
+		}
+
+		virtual const char* what() const throw()
+		{
+			return "linq exception throwed";
+		}
+	};
 	namespace iterators
 	{
+		
 		//filter, mutate
 		template<typename TIterator, typename TFunction>
 		class where_iterator
@@ -89,11 +104,12 @@ namespace LL
 			typedef select_iterator<TIterator, TFunction> TSelf;
 		private:
 			TIterator current_;
+			TIterator end_;
 			TFunction func_;
 		public:
 			select_iterator() = default;
-			select_iterator(TIterator current, TFunction func)
-				:current_(current), func_(func)
+			select_iterator(TIterator current, TIterator end, TFunction func)
+				:current_(current), end_(end), func_(func)
 			{
 
 			}
@@ -126,9 +142,58 @@ namespace LL
 				return current_ != iter.current_;
 			}
 		};
+		//single with parameter
+		template<typename TIterator, typename TFunction>
+		class single_iterator
+		{
+			typedef single_iterator<TIterator, TFunction> TSelf;
+		private:
+			TIterator current_;
+			TIterator end_;
+			TFunction func_;
+			TIterator single_;
+		public:
+			single_iterator() = default;
+			single_iterator(TIterator current, TIterator end, TFunction func)
+				:current_(current), end_(end), func_(func), single_(current_)
+			{
+				for (auto it = current_; it != end_; ++it)
+				{
+					if (func_(*it))
+					{
+						single_ = it;
+					}
+				}
+			}
 
+			TSelf& operator++()
+			{
+				current_ = end_;
+				return *this;
+			}
 
+			TSelf operator++(int)
+			{
+				TSelf self = *this;
+				current_ = end_;
+				return self;
+			}
 
+			auto operator*() const
+			{
+				return *single_;
+			}
+
+			bool operator==(const TSelf& iter) const
+			{
+				return current_ == iter.current_;
+			}
+
+			bool operator!=(const TSelf& iter) const
+			{
+				return current_ != iter.current_;
+			}
+		};
 		//skip, take
 		template<typename TIterator>
 		class skip_iterator
@@ -151,20 +216,14 @@ namespace LL
 
 			TSelf& operator++()
 			{
-				if (current_ != end_)
-				{
-					++current_;
-				}
+				++current_;
 				return *this;
 			}
 
 			TSelf operator++(int)
 			{
 				TSelf self = *this;
-				if (current_ != end_)
-				{
-					++current_;
-				}
+				++current_;
 				return self;
 			}
 
@@ -364,6 +423,12 @@ namespace LL
 		template<typename TIterator, typename TFunction>
 		using where_iter = where_iterator<TIterator, TFunction>;
 
+		template<typename TIterator, typename TFunction>
+		using select_iter = select_iterator<TIterator, TFunction>;
+
+		template<typename TIterator, typename TFunction>
+		using single_iter = single_iterator<TIterator, TFunction>;
+
 		template<typename TIterator>
 		using skip_iter = skip_iterator<TIterator>;
 
@@ -375,6 +440,7 @@ namespace LL
 
 		template<typename TIterator, typename TFunction>
 		using take_while_iter = take_while_iterator<TIterator, TFunction>;
+
 	}
 
 	template<typename TIterator>
@@ -419,6 +485,42 @@ namespace LL
 			return Queryable<iterators::where_iter<TIterator, TFunction>>(
 				iterators::where_iter<TIterator, TFunction>(begin_, end_, func),
 				iterators::where_iter<TIterator, TFunction>(end_, end_, func)
+				);
+		}
+		//select
+		template<typename TFunction>
+		Queryable<iterators::select_iter<TIterator, TFunction>> select(const TFunction& func) const
+		{
+			return Queryable<iterators::select_iter<TIterator, TFunction>>(
+				iterators::select_iter<TIterator, TFunction>(begin_, end_, func),
+				iterators::select_iter<TIterator, TFunction>(end_, end_, func)
+				);
+		}
+		//single without parameter
+		Queryable<TIterator> single() const
+		{
+			auto it = begin_;
+			if (++it != end_) throw linq_exception("The collection should have only one value.");
+			return *this;
+		}
+		//single with parameter
+		template<typename TFunction>
+		Queryable<iterators::single_iter<TIterator, TFunction>> single(const TFunction& func) const
+		{
+			if (begin_ == end_) throw linq_exception("Empty collection.");
+			int cnt = 0;
+			for (auto it = begin_; it != end_; ++it)
+			{
+				if (func(*it)) 
+				{
+					++cnt;
+				}
+			}
+			if (cnt == 0) throw linq_exception("No value found");
+			else if (cnt != 1) throw linq_exception("More than one value found");
+			return Queryable<iterators::single_iter<TIterator, TFunction>>(
+				iterators::single_iter<TIterator, TFunction>(begin_, end_, func),
+				iterators::single_iter<TIterator, TFunction>(end_, end_, func)
 				);
 		}
 		//skip
