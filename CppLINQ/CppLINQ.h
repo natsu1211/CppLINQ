@@ -36,7 +36,7 @@ namespace LL
 	};
 	namespace iterators
 	{
-		
+
 		//filter, mutate
 		template<typename TIterator, typename TFunction>
 		class where_iterator
@@ -46,7 +46,7 @@ namespace LL
 			TIterator current_;
 			TIterator end_;
 			TFunction func_;
-			
+
 		public:
 			where_iterator() = default;
 			where_iterator(TIterator current, TIterator end, TFunction func)
@@ -478,6 +478,7 @@ namespace LL
 		{
 			return end_;
 		}
+		typedef decltype(*begin_) TElement;
 		//where
 		template<typename TFunction>
 		Queryable<iterators::where_iter<TIterator, TFunction>> where(const TFunction& func) const
@@ -511,7 +512,7 @@ namespace LL
 			int cnt = 0;
 			for (auto it = begin_; it != end_; ++it)
 			{
-				if (func(*it)) 
+				if (func(*it))
 				{
 					++cnt;
 				}
@@ -557,6 +558,87 @@ namespace LL
 				iterators::take_while_iter<TIterator, TFunction>(end_, end_, func)
 				);
 		}
+		//aggregate
+		template<typename TFunction>
+		TElement aggregate(const TFunction& func) const
+		{
+			if(begin_ == end_) throw linq_exception("Empty Collection");
+			TElement result;
+			for(auto iter = begin_; iter != end_; ++iter)
+			{
+				result = func(*iter, result);
+			}
+			return result;
+		}
+		//average with function
+		template<typename TFunction>
+		TElement average(const TFunction& func) const
+		{
+			if(begin_ == end_) throw linq_exception("Empty Collection");
+			TElement sum = 0;
+			int cnt = 0;
+			for(auto iter = begin_; iter != end_; ++iter)
+			{
+				++cnt;
+				sum += func(*iter);
+			}
+			return sum/cnt;
+		}
+		//average
+		TElement average() const
+		{
+			return average([](TElement e){return e;});
+		}
+		//max
+		TElement max() const
+		{
+			return aggregate([](TElement a, TElement b){return a>b?a:b;});
+		}
+		//min
+		TElement min() const
+		{
+			return aggregate([](TElement a, TElement b){return a<b?a:b;});
+		}
+		//sum
+		TElement sum() const
+		{
+			return aggregate([](TElement a, TElement b){return b+a;});
+		}
+		//any
+		template<typename TFunction>
+		bool any(const TFunction& func) const
+		{
+			for(auto iter = begin_; iter != end_; ++iter)
+			{
+				if(func(*iter))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+		//all
+		template<typename TFunction>
+		bool all(const TFunction& func) const
+		{
+			for(auto iter = begin_; iter != end_; ++iter)
+			{
+				if(!func(*iter))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+		//count
+		int count() const
+		{
+			int cnt = 0;
+			for(auto iter = begin_; iter != end_; ++iter)
+			{
+				++cnt;
+			}
+			return cnt;
+		}
 	};
 }
-
