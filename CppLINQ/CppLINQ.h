@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <memory>
-
+#include <array>
 #include <utility>
 
 namespace LL
@@ -497,6 +497,8 @@ namespace LL
 				iterators::select_iter<TIterator, TFunction>(end_, end_, func)
 				);
 		}
+		//select many
+
 		//single without parameter
 		Queryable<TIterator> single() const
 		{
@@ -653,5 +655,32 @@ namespace LL
 			return it1 == end1 && it2 == end2;
 		}
 		//to vector
+		std::vector<TElement> to_vector() const
+		{
+			std::vector v;
+			for(auto iter = begin_; iter != end_; ++iter)
+			{
+				v.push_back(*iter);
+			}
+			return v;
+		}
+		//to array
+		std::array<TElement> to_array() const
+		{
+
+		}
+		//to list
+		std::list<TElement> to_list() const
+		{
+
+		}
+		//to map
+		std::map<TElement> to_map() const
+		{
+
+		}
+		//to lookup
+
+
 	};
 }
