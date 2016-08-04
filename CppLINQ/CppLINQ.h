@@ -640,5 +640,18 @@ namespace LL
 			}
 			return cnt;
 		}
+		//sequence equal
+		template<typename TIterator2>
+		bool sequence_equal(const Queryable<TIterator2> &seq) const
+		{
+			auto end1 = this->begin_;
+			auto end2 = seq.end_;
+			for(auto it1 = this->begin, it2 = seq.begin_; it1 != end1 && it2 != end2; ++it1, ++it2)
+			{
+				if(*it1 != *it2) return false;
+			}
+			return it1 == end1 && it2 == end2;
+		}
+		//to vector
 	};
 }
