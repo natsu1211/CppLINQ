@@ -34,9 +34,16 @@ namespace LL
 			return "linq exception throwed";
 		}
 	};
+
+	template<typename TIterator>
+	using clean_type = typename std::remove_const<typename std::remove_reference<TIterator>::type>::type;
+	
+
+	template<typename TIterator>
+	using value_type = decltype(**(TIterator*)0);
+
 	namespace iterators
 	{
-
 		//filter, mutate
 		template<typename TIterator, typename TFunction>
 		class where_iterator
@@ -81,7 +88,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(*current_)
 			{
 				return *current_;
 			}
@@ -127,7 +134,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(func_(*current_))
 			{
 				return func_(*current_);
 			}
@@ -179,7 +186,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(*single_)
 			{
 				return *single_;
 			}
@@ -227,7 +234,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(*current_)
 			{
 				return *current_;
 			}
@@ -276,7 +283,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(*current_)
 			{
 				return *current_;
 			}
@@ -339,7 +346,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(*current_)
 			{
 				return *current_;
 			}
@@ -400,7 +407,7 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const
+			auto operator*() const -> decltype(*current_)
 			{
 				return *current_;
 			}
@@ -447,13 +454,13 @@ namespace LL
 	class Queryable;
 
 	template <typename TIterator>
-	constexpr Queryable<TIterator> from(const TIterator &begin, const TIterator &end)
+	/*constexpr*/ Queryable<TIterator> from(const TIterator &begin, const TIterator &end)
 	{
 		return Queryable<TIterator>(begin, end);
 	}
 
 	template<typename TContainer>
-	constexpr auto from(const TContainer &container)
+	/*constexpr*/ auto from(const TContainer &container) -> decltype(Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container)))
 	{
 		return Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container));
 	}
@@ -461,12 +468,13 @@ namespace LL
 	template<typename TIterator>
 	class Queryable
 	{
+		using TElement = clean_type<value_type<TIterator>>;
 	private:
 		TIterator begin_;
 		TIterator end_;
 	public:
-		constexpr Queryable(){}
-		constexpr Queryable(const TIterator &begin, const TIterator &end)
+		/*constexpr*/ Queryable(){}
+		/*constexpr*/ Queryable(const TIterator &begin, const TIterator &end)
 			:begin_(begin), end_(end){}
 
 		TIterator begin() const
@@ -478,7 +486,7 @@ namespace LL
 		{
 			return end_;
 		}
-		typedef decltype(*begin_) TElement;
+		
 		//where
 		template<typename TFunction>
 		Queryable<iterators::where_iter<TIterator, TFunction>> where(const TFunction& func) const
@@ -565,7 +573,7 @@ namespace LL
 		TElement aggregate(const TFunction& func) const
 		{
 			if(begin_ == end_) throw linq_exception("Empty Collection");
-			TElement result;
+			TElement result = 0;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
 				result = func(*iter, result);
