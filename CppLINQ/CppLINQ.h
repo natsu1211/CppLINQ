@@ -37,7 +37,7 @@ namespace LL
 
 	template<typename TIterator>
 	using clean_type = typename std::remove_const<typename std::remove_reference<TIterator>::type>::type;
-	
+
 
 	template<typename TIterator>
 	using value_type = decltype(**(TIterator*)0);
@@ -76,7 +76,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				while (current_ != end_)
@@ -127,7 +127,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				++current_;
@@ -179,7 +179,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				current_ = end_;
@@ -227,7 +227,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				++current_;
@@ -276,7 +276,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				++current_;
@@ -332,7 +332,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				if (++cur_count_ == count_)
@@ -394,7 +394,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				if (current_ != end_ && ++current_ != end_)
@@ -486,7 +486,7 @@ namespace LL
 		{
 			return end_;
 		}
-		
+
 		//where
 		template<typename TFunction>
 		Queryable<iterators::where_iter<TIterator, TFunction>> where(const TFunction& func) const
