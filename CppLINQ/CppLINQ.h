@@ -29,7 +29,7 @@ namespace LL
 		{
 		}
 
-		virtual const char* what() const throw()
+		virtual const char* what() const override noexcept
 		{
 			return "linq exception throwed";
 		}
@@ -37,7 +37,7 @@ namespace LL
 
 	template<typename TIterator>
 	using clean_type = typename std::remove_const<typename std::remove_reference<TIterator>::type>::type;
-	
+
 
 	template<typename TIterator>
 	using value_type = decltype(**(TIterator*)0);
@@ -76,7 +76,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				while (current_ != end_)
@@ -127,7 +127,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				++current_;
@@ -137,6 +137,68 @@ namespace LL
 			auto operator*() const -> decltype(func_(*current_))
 			{
 				return func_(*current_);
+			}
+
+			bool operator==(const TSelf& iter) const
+			{
+				return current_ == iter.current_;
+			}
+
+			bool operator!=(const TSelf& iter) const
+			{
+				return current_ != iter.current_;
+			}
+		};
+		//select many
+		template<typename TIterator, typename TFunction>
+		class select_many_iterator
+		{
+		private:
+			static TFunction get_function();
+			static value_type<TIterator> get_value();
+			using TSelf = select_many_iterator<TIterator, TFunction>;
+			using TInner = clean_type<get_function()(get_value())>;
+		private:
+			TIterator current_;
+			TInner inner_current_;
+			TIterator end_;
+			TInner inner_end_;
+			TFunction func_;
+		public:
+			select_many_iterator() = default;
+			select_many_iterator(TIterator current, TIterator end, TFunction func)
+				:current_(current), inner_current_(std::begin(*current_)),
+				end_(end), inner_end_(std::end(*current_)), func_(func)
+			{
+
+			}
+
+			TSelf& operator++()
+			{
+				if(++inner_current_ == inner_end_)
+				{
+					++current_;
+					inner_current_ = std::begin(*current_);
+					inner_end_ = std::end(*current_);
+				}
+				return *this;
+			}
+
+			const TSelf operator++(int)
+			{
+				TSelf self = *this;
+				if(++inner_current_ == inner_end_)
+				{
+					++current_;
+					inner_current_ = std::begin(*current_);
+					inner_end_ = std::end(*current_);
+				}
+				return self;
+			}
+
+			auto operator*() const -> decltype(func(*current_))
+			{
+				return func_(*inner_current_);
 			}
 
 			bool operator==(const TSelf& iter) const
@@ -179,7 +241,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				current_ = end_;
@@ -227,7 +289,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				++current_;
@@ -276,7 +338,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				++current_;
@@ -332,7 +394,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				if (++cur_count_ == count_)
@@ -394,7 +456,7 @@ namespace LL
 				return *this;
 			}
 
-			TSelf operator++(int)
+			const TSelf operator++(int)
 			{
 				TSelf self = *this;
 				if (current_ != end_ && ++current_ != end_)
@@ -434,6 +496,9 @@ namespace LL
 		using select_iter = select_iterator<TIterator, TFunction>;
 
 		template<typename TIterator, typename TFunction>
+		using select_many_iter = select_many_iterator<TIterator, TFunction>;
+
+		template<typename TIterator, typename TFunction>
 		using single_iter = single_iterator<TIterator, TFunction>;
 
 		template<typename TIterator>
@@ -454,7 +519,7 @@ namespace LL
 	class Queryable;
 
 	template <typename TIterator>
-	/*constexpr*/ Queryable<TIterator> from(const TIterator &begin, const TIterator &end)
+	/*constexpr*/ Queryable<TIterator> from(const TIterator& begin, const TIterator& end)
 	{
 		return Queryable<TIterator>(begin, end);
 	}
@@ -474,7 +539,7 @@ namespace LL
 		TIterator end_;
 	public:
 		/*constexpr*/ Queryable(){}
-		/*constexpr*/ Queryable(const TIterator &begin, const TIterator &end)
+		/*constexpr*/ Queryable(const TIterator& begin, const TIterator& end)
 			:begin_(begin), end_(end){}
 
 		TIterator begin() const
@@ -486,7 +551,7 @@ namespace LL
 		{
 			return end_;
 		}
-		
+
 		//where
 		template<typename TFunction>
 		Queryable<iterators::where_iter<TIterator, TFunction>> where(const TFunction& func) const
@@ -506,7 +571,14 @@ namespace LL
 				);
 		}
 		//select many
-
+		template<typename TFunction>
+		Queryable<iterators::select_many_iter<TIterator, TFunction>> select_many(const TFunction& func) const
+		{
+			return Queryable<iterators::select_many_iter<TIterator, TFunction>>(
+				iterators::select_many_iter<TIterator, TFunction>(begin_, end_, func),
+				iterators::select_many_iter<TIterator, TFunction>(end_, end_, func)
+				);
+		}
 		//single without parameter
 		Queryable<TIterator> single() const
 		{
@@ -654,7 +726,7 @@ namespace LL
 		template<typename TIterator2>
 		bool sequence_equal(const Queryable<TIterator2> &seq) const
 		{
-			auto end1 = this->begin_;
+			auto end1 = this->end_;
 			auto end2 = seq.end_;
 			for(auto it1 = this->begin, it2 = seq.begin_; it1 != end1 && it2 != end2; ++it1, ++it2)
 			{
@@ -665,6 +737,7 @@ namespace LL
 		//to vector
 		std::vector<TElement> to_vector() const
 		{
+			//TODO: MOVE
 			std::vector v;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
@@ -675,19 +748,22 @@ namespace LL
 		//to array
 		std::array<TElement> to_array() const
 		{
-
+			//TODO: MOVE
 		}
 		//to list
 		std::list<TElement> to_list() const
 		{
-
+			//TODO: MOVE
 		}
 		//to map
 		std::map<TElement> to_map() const
 		{
-
+			//TODO: MOVE
 		}
 		//to lookup
+		//to unordered_map
+		//to set
+		//to unordered_set
 
 
 	};
