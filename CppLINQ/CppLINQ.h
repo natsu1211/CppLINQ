@@ -29,7 +29,7 @@ namespace LL
 		{
 		}
 
-		virtual const char* what() const override noexcept
+		virtual const char* what() const noexcept
 		{
 			return "linq exception throwed";
 		}
@@ -157,29 +157,40 @@ namespace LL
 			static TFunction get_function();
 			static value_type<TIterator> get_value();
 			using TSelf = select_many_iterator<TIterator, TFunction>;
-			using TInner = clean_type<get_function()(get_value())>;
+			using TInner = clean_type<decltype(get_function()(get_value()))>;
+			static TInner get_inner();
+			using TInnerIterator = decltype(std::begin(get_inner()));
 		private:
 			TIterator current_;
-			TInner inner_current_;
 			TIterator end_;
-			TInner inner_end_;
+			TInnerIterator inner_current_;
+			TInnerIterator inner_end_;
 			TFunction func_;
+			
 		public:
 			select_many_iterator() = default;
 			select_many_iterator(TIterator current, TIterator end, TFunction func)
-				:current_(current), inner_current_(std::begin(*current_)),
-				end_(end), inner_end_(std::end(*current_)), func_(func)
+				:current_(current), end_(end), func_(func)
 			{
-
+				if (current_ != end_)
+				{
+					auto cur = func_(*current_);
+					inner_current_ = std::begin(cur);
+					inner_end_ = std::end(cur);
+				}
+				
 			}
 
 			TSelf& operator++()
 			{
-				if(++inner_current_ == inner_end_)
+				if(++inner_current_ == inner_end_ && current_ != end_)
 				{
-					++current_;
-					inner_current_ = std::begin(*current_);
-					inner_end_ = std::end(*current_);
+					if (++current_ != end_)
+					{
+						auto cur = func_(*current_);
+						inner_current_ = std::begin(cur);
+						inner_end_ = std::end(cur);
+					}
 				}
 				return *this;
 			}
@@ -187,18 +198,21 @@ namespace LL
 			const TSelf operator++(int)
 			{
 				TSelf self = *this;
-				if(++inner_current_ == inner_end_)
+				if(++inner_current_ == inner_end_ && current_ != end_)
 				{
-					++current_;
-					inner_current_ = std::begin(*current_);
-					inner_end_ = std::end(*current_);
+					if (++current_ != end_)
+					{
+						auto cur = func_(*current_);
+						inner_current_ = std::begin(cur);
+						inner_end_ = std::end(cur);
+					}
 				}
 				return self;
 			}
 
-			auto operator*() const -> decltype(func(*current_))
+			auto operator*() const -> decltype(*inner_current_)
 			{
-				return func_(*inner_current_);
+				return *inner_current_;
 			}
 
 			bool operator==(const TSelf& iter) const
@@ -738,32 +752,32 @@ namespace LL
 		std::vector<TElement> to_vector() const
 		{
 			//TODO: MOVE
-			std::vector v;
+			std::vector<TElement> v;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
 				v.push_back(*iter);
 			}
 			return v;
 		}
-		//to array
-		std::array<TElement> to_array() const
-		{
-			//TODO: MOVE
-		}
-		//to list
-		std::list<TElement> to_list() const
-		{
-			//TODO: MOVE
-		}
-		//to map
-		std::map<TElement> to_map() const
-		{
-			//TODO: MOVE
-		}
-		//to lookup
-		//to unordered_map
-		//to set
-		//to unordered_set
+		////to array
+		//std::array<TElement> to_array() const
+		//{
+		//	//TODO: MOVE
+		//}
+		////to list
+		//std::list<TElement> to_list() const
+		//{
+		//	//TODO: MOVE
+		//}
+		////to map
+		//std::map<TElement> to_map() const
+		//{
+		//	//TODO: MOVE
+		//}
+		////to lookup
+		////to unordered_map
+		////to set
+		////to unordered_set
 
 
 	};
