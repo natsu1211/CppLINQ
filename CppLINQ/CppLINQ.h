@@ -594,15 +594,15 @@ namespace LL
 				);
 		}
 		//single without parameter
-		Queryable<TIterator> single() const
+		TElement single() const
 		{
 			auto it = begin_;
 			if (++it != end_) throw linq_exception("The collection should have only one value.");
-			return *this;
+			return *begin_;
 		}
 		//single with parameter
 		template<typename TFunction>
-		Queryable<iterators::single_iter<TIterator, TFunction>> single(const TFunction& func) const
+		TElement single(const TFunction& func) const
 		{
 			if (begin_ == end_) throw linq_exception("Empty collection.");
 			int cnt = 0;
@@ -615,10 +615,24 @@ namespace LL
 			}
 			if (cnt == 0) throw linq_exception("No value found");
 			else if (cnt != 1) throw linq_exception("More than one value found");
-			return Queryable<iterators::single_iter<TIterator, TFunction>>(
+			auto queryable = Queryable<iterators::single_iter<TIterator, TFunction>>(
 				iterators::single_iter<TIterator, TFunction>(begin_, end_, func),
 				iterators::single_iter<TIterator, TFunction>(end_, end_, func)
 				);
+			return *queryable;
+		}
+		//single_or_default without parameter
+		TElement single_or_default() const
+		{
+			auto it = begin_;
+			//empty
+			if (it == end_ )
+			{
+				//TElement element{};
+				//return element;
+			}
+			if (++it != end_) throw linq_exception("The collection should have only one value.");
+			return *begin_;
 		}
 		//skip
 		Queryable<iterators::skip_iter<TIterator>> skip(int count) const
