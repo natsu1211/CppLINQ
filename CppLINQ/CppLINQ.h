@@ -166,7 +166,7 @@ namespace LL
 			TInnerIterator inner_current_;
 			TInnerIterator inner_end_;
 			TFunction func_;
-			
+
 		public:
 			select_many_iterator() = default;
 			select_many_iterator(TIterator current, TIterator end, TFunction func)
@@ -178,7 +178,7 @@ namespace LL
 					inner_current_ = std::begin(cur);
 					inner_end_ = std::end(cur);
 				}
-				
+
 			}
 
 			TSelf& operator++()
@@ -751,33 +751,89 @@ namespace LL
 		//to vector
 		std::vector<TElement> to_vector() const
 		{
-			//TODO: MOVE
 			std::vector<TElement> v;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
 				v.push_back(*iter);
 			}
-			return v;
+			return std::move(vector);
 		}
-		////to array
-		//std::array<TElement> to_array() const
-		//{
-		//	//TODO: MOVE
-		//}
-		////to list
-		//std::list<TElement> to_list() const
-		//{
-		//	//TODO: MOVE
-		//}
-		////to map
-		//std::map<TElement> to_map() const
-		//{
-		//	//TODO: MOVE
-		//}
-		////to lookup
-		////to unordered_map
-		////to set
-		////to unordered_set
+		//to list
+		std::list<TElement> to_list() const
+		{
+			std::list<TElement> list;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				list.push_back(*iter);
+			}
+			return std::move(list);
+		}
+		//to set
+		std::set<TElement> to_set() cosnt
+		{
+			std::set<TElement> set;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				set.insert(*iter);
+			}
+			return std::move(set);
+		}
+		//to unordered_set
+		std::set<TElement> to_unordered_set() cosnt
+		{
+			std::unordered_set<TElement> set;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				set.insert(*iter);
+			}
+			return std::move(set);
+		}
+		//to map
+		template<typename TFunction1, typename TFunction2>
+		auto to_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> std::map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))>
+		{
+			std::map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))> map;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				map.insert(std::make_pair<keySelector(*iter),valueSelector(*iter)>);
+			}
+			return std::move(map);
+		}
+		//to map
+		template<typename TFunction1>
+		auto to_map(const TFunction1& keySelector) const -> std::map<decltype(keySelector(*(TElement*)0), TElement>
+		{
+			std::map<decltype(keySelector(*(TElement*)0), TElement> map;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				map.insert(std::make_pair<keySelector(*iter),*iter>);
+			}
+			return std::move(map);
+		}
+
+		//to unordered_map
+		template<typename TFunction1, typename TFunction2>
+		auto to_unordered_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> std::unordered_map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))>
+		{
+			std::unordered_map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))> map;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				map.insert(std::make_pair<keySelector(*iter),valueSelector(*iter)>);
+			}
+			return std::move(map);
+		}
+
+		//to unordered_map
+		template<typename TFunction1>
+		auto to_unordered_map(const TFunction1& keySelector) const -> std::unordered_map<decltype(keySelector(*(TElement*)0), TElement>
+		{
+			std::unordered_map<decltype(keySelector(*(TElement*)0), TElement> map;
+			for (auto iter = begin_; iter != end_ ; ++iter)
+			{
+				map.insert(std::make_pair<keySelector(*iter),*iter>);
+			}
+			return std::move(map);
+		}
 
 
 	};
