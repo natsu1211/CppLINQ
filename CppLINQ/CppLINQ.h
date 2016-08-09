@@ -42,6 +42,18 @@ namespace LL
 	template<typename TIterator>
 	using value_type = decltype(**(TIterator*)0);
 
+	template<typename T, bool B = false>
+	struct default_type
+	{
+		typedef decltype(nullptr) type;
+	};
+
+	template<typename T>
+	struct default_type<T, true>
+	{
+		typedef typename T type;
+	};
+
 	namespace iterators
 	{
 		//filter, mutate
@@ -622,15 +634,12 @@ namespace LL
 			return *queryable;
 		}
 		//single_or_default without parameter
-		TElement single_or_default() const
+		TElement single_or_default() const 
 		{
 			auto it = begin_;
-			//empty
-			if (it == end_ )
-			{
-				//TElement element{};
-				//return element;
-			}
+			//empty, TODO
+			if (it == end_ ) return TElement();
+			
 			if (++it != end_) throw linq_exception("The collection should have only one value.");
 			return *begin_;
 		}
@@ -765,10 +774,10 @@ namespace LL
 		//to vector
 		std::vector<TElement> to_vector() const
 		{
-			std::vector<TElement> v;
+			std::vector<TElement> vector;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
-				v.push_back(*iter);
+				vector.push_back(*iter);
 			}
 			return std::move(vector);
 		}
@@ -783,7 +792,7 @@ namespace LL
 			return std::move(list);
 		}
 		//to set
-		std::set<TElement> to_set() cosnt
+		std::set<TElement> to_set() const
 		{
 			std::set<TElement> set;
 			for (auto iter = begin_; iter != end_ ; ++iter)
@@ -793,7 +802,7 @@ namespace LL
 			return std::move(set);
 		}
 		//to unordered_set
-		std::set<TElement> to_unordered_set() cosnt
+		std::set<TElement> to_unordered_set() const
 		{
 			std::unordered_set<TElement> set;
 			for (auto iter = begin_; iter != end_ ; ++iter)
@@ -804,9 +813,9 @@ namespace LL
 		}
 		//to map
 		template<typename TFunction1, typename TFunction2>
-		auto to_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> std::map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))>
+		auto to_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
 		{
-			std::map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))> map;
+			std::map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
 			{
 				map.insert(std::make_pair<keySelector(*iter),valueSelector(*iter)>);
@@ -814,10 +823,10 @@ namespace LL
 			return std::move(map);
 		}
 		//to map
-		template<typename TFunction1>
-		auto to_map(const TFunction1& keySelector) const -> std::map<decltype(keySelector(*(TElement*)0), TElement>
+		template<typename TFunction>
+		auto to_map(const TFunction& keySelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), TElement>())
 		{
-			std::map<decltype(keySelector(*(TElement*)0), TElement> map;
+			std::map<decltype(keySelector(*(TElement*)0)), TElement> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
 			{
 				map.insert(std::make_pair<keySelector(*iter),*iter>);
@@ -827,9 +836,9 @@ namespace LL
 
 		//to unordered_map
 		template<typename TFunction1, typename TFunction2>
-		auto to_unordered_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> std::unordered_map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))>
+		auto to_unordered_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
 		{
-			std::unordered_map<decltype(keySelector(*(TElement*)0), decltype(vaulueSelector(*(TElement*)0))> map;
+			std::unordered_map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
 			{
 				map.insert(std::make_pair<keySelector(*iter),valueSelector(*iter)>);
@@ -838,10 +847,10 @@ namespace LL
 		}
 
 		//to unordered_map
-		template<typename TFunction1>
-		auto to_unordered_map(const TFunction1& keySelector) const -> std::unordered_map<decltype(keySelector(*(TElement*)0), TElement>
+		template<typename TFunction>
+		auto to_unordered_map(const TFunction& keySelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement>())
 		{
-			std::unordered_map<decltype(keySelector(*(TElement*)0), TElement> map;
+			std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
 			{
 				map.insert(std::make_pair<keySelector(*iter),*iter>);
