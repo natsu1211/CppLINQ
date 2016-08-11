@@ -511,6 +511,49 @@ namespace LL
 			}
 		};
 
+		template<typename TIterator, typename TResult>
+		class cast_iterator
+		{
+			typedef cast_iterator<TIterator, TResult> TSelf;
+		private:
+			TIterator current_;
+			TIterator end_;
+		public:
+			cast_iterator() = default;
+			cast_iterator(TIterator current, TIterator end)
+				:current_(current), end_(end)
+			{
+
+			}
+
+			TSelf& operator++()
+			{
+				++current_;
+				return *this;
+			}
+
+			const TSelf operator++(int)
+			{
+				TSelf self = *this;
+				++current_;
+				return self;
+			}
+
+			TResult operator*() const
+			{
+				return (TResult)(*current_);
+			}
+
+			bool operator==(const TSelf& iter) const
+			{
+				return current_ == iter.current_;
+			}
+
+			bool operator!=(const TSelf& iter) const
+			{
+				return current_ != iter.current_;
+			}
+		};
 	}
 
 	namespace iterators
@@ -538,6 +581,9 @@ namespace LL
 
 		template<typename TIterator, typename TFunction>
 		using take_while_iter = take_while_iterator<TIterator, TFunction>;
+
+		template<typename TIterator, typename TResult>
+		using cast_iter = cast_iterator<TIterator, TResult>;
 
 	}
 
@@ -638,7 +684,7 @@ namespace LL
 		{
 			auto it = begin_;
 			//empty, TODO
-			if (it == end_ ) return TElement();
+			if (it == end_) return TElement{};
 			
 			if (++it != end_) throw linq_exception("The collection should have only one value.");
 			return *begin_;
@@ -858,6 +904,15 @@ namespace LL
 			return std::move(map);
 		}
 
+		//cast
+		template<typename TResult>
+		Queryable<iterators::cast_iter<TIterator, TResult>> cast() const
+		{
+			return Queryable<iterators::cast_iter<TIterator, TResult>>(
+				iterators::cast_iter<TIterator, TResult>(begin_, end_),
+				iterators::cast_iter<TIterator, TResult>(end_, end_)
+				);
+		}
 
 	};
 }
