@@ -57,18 +57,18 @@ namespace LL
 	namespace iterators
 	{
 		//filter, mutate
-		template<typename TIterator, typename TFunction>
+		template<typename TIterator, typename TPredict>
 		class where_iterator
 		{
-			typedef where_iterator<TIterator, TFunction> TSelf;
+			typedef where_iterator<TIterator, TPredict> TSelf;
 		private:
 			TIterator current_;
 			TIterator end_;
-			TFunction func_;
+			TPredict func_;
 
 		public:
 			where_iterator() = default;
-			where_iterator(TIterator current, TIterator end, TFunction func)
+			where_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func)
 			{
 				while (current_ != end_ && !func_(*current_))
@@ -117,17 +117,17 @@ namespace LL
 		};
 
 
-		template<typename TIterator, typename TFunction>
+		template<typename TIterator, typename TPredict>
 		class select_iterator
 		{
-			typedef select_iterator<TIterator, TFunction> TSelf;
+			typedef select_iterator<TIterator, TPredict> TSelf;
 		private:
 			TIterator current_;
 			TIterator end_;
-			TFunction func_;
+			TPredict func_;
 		public:
 			select_iterator() = default;
-			select_iterator(TIterator current, TIterator end, TFunction func)
+			select_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func)
 			{
 
@@ -162,13 +162,13 @@ namespace LL
 			}
 		};
 		//select many
-		template<typename TIterator, typename TFunction>
+		template<typename TIterator, typename TPredict>
 		class select_many_iterator
 		{
 		private:
-			static TFunction get_function();
+			static TPredict get_function();
 			static value_type<TIterator> get_value();
-			using TSelf = select_many_iterator<TIterator, TFunction>;
+			using TSelf = select_many_iterator<TIterator, TPredict>;
 			using TInner = clean_type<decltype(get_function()(get_value()))>;
 			static TInner get_inner();
 			using TInnerIterator = decltype(std::begin(get_inner()));
@@ -177,11 +177,11 @@ namespace LL
 			TIterator end_;
 			TInnerIterator inner_current_;
 			TInnerIterator inner_end_;
-			TFunction func_;
+			TPredict func_;
 
 		public:
 			select_many_iterator() = default;
-			select_many_iterator(TIterator current, TIterator end, TFunction func)
+			select_many_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func)
 			{
 				if (current_ != end_)
@@ -238,18 +238,18 @@ namespace LL
 			}
 		};
 		//single with parameter
-		template<typename TIterator, typename TFunction>
+		template<typename TIterator, typename TPredict>
 		class single_iterator
 		{
-			typedef single_iterator<TIterator, TFunction> TSelf;
+			typedef single_iterator<TIterator, TPredict> TSelf;
 		private:
 			TIterator current_;
 			TIterator end_;
-			TFunction func_;
+			TPredict func_;
 			TIterator single_;
 		public:
 			single_iterator() = default;
-			single_iterator(TIterator current, TIterator end, TFunction func)
+			single_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func), single_(current_)
 			{
 				for (auto it = current_; it != end_; ++it)
@@ -299,7 +299,7 @@ namespace LL
 			TIterator end_;
 		public:
 			skip_iterator() = default;
-			skip_iterator(TIterator current, TIterator end, int skip_count)
+			skip_iterator(const TIterator& current, const TIterator& end, int skip_count)
 				:current_(current), end_(end)
 			{
 				while (skip_count > 0 && current_ != end_)
@@ -338,18 +338,18 @@ namespace LL
 			}
 		};
 
-		template<typename TIterator, typename TFunction>
+		template<typename TIterator, typename TPredict>
 		class skip_while_iterator
 		{
-			typedef skip_while_iterator<TIterator, TFunction> TSelf;
+			typedef skip_while_iterator<TIterator, TPredict> TSelf;
 		private:
 			TIterator current_;
 			TIterator end_;
-			TFunction func_;
+			TPredict func_;
 
 		public:
 			skip_while_iterator() = default;
-			skip_while_iterator(TIterator current, TIterator end, TFunction func)
+			skip_while_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func)
 			{
 				while (current_ != end_ && func_(*current_) )
@@ -398,7 +398,7 @@ namespace LL
 			int cur_count_;
 		public:
 			take_iterator() = default;
-			take_iterator(TIterator current, TIterator end, int take_count)
+			take_iterator(const TIterator& current, const TIterator& end, int take_count)
 				:current_(current), end_(end), count_(take_count), cur_count_(0)
 			{
 				if (cur_count_ == count_)
@@ -450,18 +450,18 @@ namespace LL
 			}
 		};
 
-		template<typename TIterator, typename TFunction>
+		template<typename TIterator, typename TPredict>
 		class take_while_iterator
 		{
-			typedef take_while_iterator<TIterator, TFunction> TSelf;
+			typedef take_while_iterator<TIterator, TPredict> TSelf;
 		private:
 			TIterator current_;
 			TIterator end_;
-			TFunction func_;
+			TPredict func_;
 
 		public:
 			take_while_iterator() = default;
-			take_while_iterator(TIterator current, TIterator end, TFunction func)
+			take_while_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func)
 			{
 				if (current_ != end_ && !func_(*current_))
@@ -518,12 +518,12 @@ namespace LL
 		private:
 			TIterator current_;
 			TIterator end_;
+
 		public:
 			cast_iterator() = default;
-			cast_iterator(TIterator current, TIterator end)
+			cast_iterator(const TIterator& current, const TIterator& end)
 				:current_(current), end_(end)
 			{
-
 			}
 
 			TSelf& operator++()
@@ -554,53 +554,129 @@ namespace LL
 				return current_ != iter.current_;
 			}
 		};
+
+		template<typename TIterator1, typename TIterator2>
+		class concat_iterator
+		{
+			typedef concat_iterator<TIterator1, TIterator2> TSelf;
+		private:
+			TIterator1 current1_;
+			TIterator1 end1_;
+			TIterator2 current2_;
+			TIterator2 end2_;
+		public:
+			concat_iterator() = default;
+			concat_iterator(const TIterator1& current1, const TIterator1& end1, const TIterator2& current2, const TIterator2& end2)
+				:current1_(current1), end1_(end1), current2_(current2), end2_(end2)
+			{
+
+			}
+
+			TSelf& operator++()
+			{
+				if (current1_ != end1_)
+				{
+					++current1_;
+				}
+				else if (current2_ != end2_)
+				{
+					++current2_;
+				}
+				
+				return *this;
+			}
+
+			const TSelf operator++(int)
+			{
+				TSelf self = *this;
+				if (current1_ != end1_)
+				{
+					++current_1;
+				}
+				else if (current2_ != end2_)
+				{
+					++current2_;
+				}
+				return self;
+			}
+
+			auto operator*() const -> decltype(*current1_)
+			{
+				return (current1_ != end1_) ? *current1_ : *current2_;
+			}
+
+			bool operator==(const TSelf& iter) const
+			{
+				if (current1_ != end1_) return current1_ == iter.current1_;
+				return current2_ == iter.current2_;
+			}
+
+			bool operator!=(const TSelf& iter) const
+			{
+				if (current1_ != end1_) return current1_ != iter.current1_;
+				return current2_ != iter.current2_;
+			}
+		};
 	}
 
 	namespace iterators
 	{
-		template<typename TIterator, typename TFunction>
-		using where_iter = where_iterator<TIterator, TFunction>;
+		template<typename TIterator, typename TPredict>
+		using where_iter = where_iterator<TIterator, TPredict>;
 
-		template<typename TIterator, typename TFunction>
-		using select_iter = select_iterator<TIterator, TFunction>;
+		template<typename TIterator, typename TPredict>
+		using select_iter = select_iterator<TIterator, TPredict>;
 
-		template<typename TIterator, typename TFunction>
-		using select_many_iter = select_many_iterator<TIterator, TFunction>;
+		template<typename TIterator, typename TPredict>
+		using select_many_iter = select_many_iterator<TIterator, TPredict>;
 
-		template<typename TIterator, typename TFunction>
-		using single_iter = single_iterator<TIterator, TFunction>;
+		template<typename TIterator, typename TPredict>
+		using single_iter = single_iterator<TIterator, TPredict>;
 
 		template<typename TIterator>
 		using skip_iter = skip_iterator<TIterator>;
 
-		template<typename TIterator, typename TFunction>
-		using skip_while_iter = skip_while_iterator<TIterator, TFunction>;
+		template<typename TIterator, typename TPredict>
+		using skip_while_iter = skip_while_iterator<TIterator, TPredict>;
 
 		template<typename TIterator>
 		using take_iter = take_iterator<TIterator>;
 
-		template<typename TIterator, typename TFunction>
-		using take_while_iter = take_while_iterator<TIterator, TFunction>;
+		template<typename TIterator, typename TPredict>
+		using take_while_iter = take_while_iterator<TIterator, TPredict>;
 
 		template<typename TIterator, typename TResult>
 		using cast_iter = cast_iterator<TIterator, TResult>;
+
+		template<typename TIterator1, typename TIterator2>
+		using concat_iter = concat_iterator<TIterator1, TIterator2>;
 
 	}
 
 	template<typename TIterator>
 	class Queryable;
 
+	template<typename TIterator>
+	class Queryables;
+
 	template <typename TIterator>
-	/*constexpr*/ Queryable<TIterator> from(const TIterator& begin, const TIterator& end)
+	constexpr Queryable<TIterator> from(const TIterator& begin, const TIterator& end)
 	{
 		return Queryable<TIterator>(begin, end);
 	}
 
 	template<typename TContainer>
-	/*constexpr*/ auto from(const TContainer &container) -> decltype(Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container)))
+	constexpr auto from(const TContainer &container) -> decltype(Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container)))
 	{
 		return Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container));
 	}
+
+	template<typename TValue>
+	constexpr auto from_value(const TValue& value)
+	{
+
+	}
+
 
 	template<typename TIterator>
 	class Queryable
@@ -610,8 +686,8 @@ namespace LL
 		TIterator begin_;
 		TIterator end_;
 	public:
-		/*constexpr*/ Queryable(){}
-		/*constexpr*/ Queryable(const TIterator& begin, const TIterator& end)
+		constexpr Queryable(){}
+		constexpr Queryable(const TIterator& begin, const TIterator& end)
 			:begin_(begin), end_(end){}
 
 		TIterator begin() const
@@ -625,30 +701,30 @@ namespace LL
 		}
 
 		//where
-		template<typename TFunction>
-		Queryable<iterators::where_iter<TIterator, TFunction>> where(const TFunction& func) const
+		template<typename TPredict>
+		Queryable<iterators::where_iter<TIterator, TPredict>> where(const TPredict& func) const
 		{
-			return Queryable<iterators::where_iter<TIterator, TFunction>>(
-				iterators::where_iter<TIterator, TFunction>(begin_, end_, func),
-				iterators::where_iter<TIterator, TFunction>(end_, end_, func)
+			return Queryable<iterators::where_iter<TIterator, TPredict>>(
+				iterators::where_iter<TIterator, TPredict>(begin_, end_, func),
+				iterators::where_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
 		//select
-		template<typename TFunction>
-		Queryable<iterators::select_iter<TIterator, TFunction>> select(const TFunction& func) const
+		template<typename TPredict>
+		Queryable<iterators::select_iter<TIterator, TPredict>> select(const TPredict& func) const
 		{
-			return Queryable<iterators::select_iter<TIterator, TFunction>>(
-				iterators::select_iter<TIterator, TFunction>(begin_, end_, func),
-				iterators::select_iter<TIterator, TFunction>(end_, end_, func)
+			return Queryable<iterators::select_iter<TIterator, TPredict>>(
+				iterators::select_iter<TIterator, TPredict>(begin_, end_, func),
+				iterators::select_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
 		//select many
-		template<typename TFunction>
-		Queryable<iterators::select_many_iter<TIterator, TFunction>> select_many(const TFunction& func) const
+		template<typename TPredict>
+		Queryable<iterators::select_many_iter<TIterator, TPredict>> select_many(const TPredict& func) const
 		{
-			return Queryable<iterators::select_many_iter<TIterator, TFunction>>(
-				iterators::select_many_iter<TIterator, TFunction>(begin_, end_, func),
-				iterators::select_many_iter<TIterator, TFunction>(end_, end_, func)
+			return Queryable<iterators::select_many_iter<TIterator, TPredict>>(
+				iterators::select_many_iter<TIterator, TPredict>(begin_, end_, func),
+				iterators::select_many_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
 		//single without parameter
@@ -659,10 +735,10 @@ namespace LL
 			return *begin_;
 		}
 		//single with parameter
-		template<typename TFunction>
-		TElement single(const TFunction& func) const
+		template<typename TPredict>
+		TElement single(const TPredict& func) const
 		{
-			if (begin_ == end_) throw linq_exception("Empty collection.");
+			if (empty()) throw linq_exception("Empty collection.");
 			int cnt = 0;
 			for (auto it = begin_; it != end_; ++it)
 			{
@@ -673,9 +749,9 @@ namespace LL
 			}
 			if (cnt == 0) throw linq_exception("No value found");
 			else if (cnt != 1) throw linq_exception("More than one value found");
-			auto queryable = Queryable<iterators::single_iter<TIterator, TFunction>>(
-				iterators::single_iter<TIterator, TFunction>(begin_, end_, func),
-				iterators::single_iter<TIterator, TFunction>(end_, end_, func)
+			auto queryable = Queryable<iterators::single_iter<TIterator, TPredict>>(
+				iterators::single_iter<TIterator, TPredict>(begin_, end_, func),
+				iterators::single_iter<TIterator, TPredict>(end_, end_, func)
 				);
 			return *queryable;
 		}
@@ -683,7 +759,7 @@ namespace LL
 		TElement single_or_default() const 
 		{
 			auto it = begin_;
-			//empty, TODO
+			//empty, require TElement has a default constructor, TODO
 			if (it == end_) return TElement{};
 			
 			if (++it != end_) throw linq_exception("The collection should have only one value.");
@@ -698,12 +774,12 @@ namespace LL
 				);
 		}
 		//skip_while
-		template<typename TFunction>
-		Queryable<iterators::skip_while_iter<TIterator, TFunction>> skip_while(const TFunction& func) const
+		template<typename TPredict>
+		Queryable<iterators::skip_while_iter<TIterator, TPredict>> skip_while(const TPredict& func) const
 		{
-			return Queryable<iterators::skip_while_iter<TIterator, TFunction>>(
-				iterators::skip_while_iter<TIterator, TFunction>(begin_, end_, func),
-				iterators::skip_while_iter<TIterator, TFunction>(end_, end_, func)
+			return Queryable<iterators::skip_while_iter<TIterator, TPredict>>(
+				iterators::skip_while_iter<TIterator, TPredict>(begin_, end_, func),
+				iterators::skip_while_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
 		//take
@@ -715,19 +791,19 @@ namespace LL
 				);
 		}
 		//take_while
-		template<typename TFunction>
-		Queryable<iterators::take_while_iter<TIterator, TFunction>> take_while(const TFunction& func) const
+		template<typename TPredict>
+		Queryable<iterators::take_while_iter<TIterator, TPredict>> take_while(const TPredict& func) const
 		{
-			return Queryable<iterators::take_while_iter<TIterator, TFunction>>(
-				iterators::take_while_iter<TIterator, TFunction>(begin_, end_, func),
-				iterators::take_while_iter<TIterator, TFunction>(end_, end_, func)
+			return Queryable<iterators::take_while_iter<TIterator, TPredict>>(
+				iterators::take_while_iter<TIterator, TPredict>(begin_, end_, func),
+				iterators::take_while_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
 		//aggregate
-		template<typename TFunction>
-		TElement aggregate(const TFunction& func) const
+		template<typename TPredict>
+		TElement aggregate(const TPredict& func) const
 		{
-			if(begin_ == end_) throw linq_exception("Empty Collection");
+			if(empty()) throw linq_exception("Empty Collection");
 			TElement result = 0;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
@@ -736,10 +812,10 @@ namespace LL
 			return result;
 		}
 		//average with function
-		template<typename TFunction>
-		TElement average(const TFunction& func) const
+		template<typename TPredict>
+		TElement average(const TPredict& func) const
 		{
-			if(begin_ == end_) throw linq_exception("Empty Collection");
+			if(empty()) throw linq_exception("Empty Collection");
 			TElement sum = 0;
 			int cnt = 0;
 			for(auto iter = begin_; iter != end_; ++iter)
@@ -770,8 +846,8 @@ namespace LL
 			return aggregate([](TElement a, TElement b){return b+a;});
 		}
 		//any
-		template<typename TFunction>
-		bool any(const TFunction& func) const
+		template<typename TPredict>
+		bool any(const TPredict& func) const
 		{
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
@@ -783,8 +859,8 @@ namespace LL
 			return false;
 		}
 		//all
-		template<typename TFunction>
-		bool all(const TFunction& func) const
+		template<typename TPredict>
+		bool all(const TPredict& func) const
 		{
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
@@ -858,8 +934,8 @@ namespace LL
 			return std::move(set);
 		}
 		//to map
-		template<typename TFunction1, typename TFunction2>
-		auto to_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
+		template<typename TPredict1, typename TPredict2>
+		auto to_map(const TPredict1& keySelector, const TPredict2& valueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
 		{
 			std::map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
@@ -869,8 +945,8 @@ namespace LL
 			return std::move(map);
 		}
 		//to map
-		template<typename TFunction>
-		auto to_map(const TFunction& keySelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), TElement>())
+		template<typename TPredict>
+		auto to_map(const TPredict& keySelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), TElement>())
 		{
 			std::map<decltype(keySelector(*(TElement*)0)), TElement> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
@@ -881,8 +957,8 @@ namespace LL
 		}
 
 		//to unordered_map
-		template<typename TFunction1, typename TFunction2>
-		auto to_unordered_map(const TFunction1& keySelector, const TFunction2& valueSelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
+		template<typename TPredict1, typename TPredict2>
+		auto to_unordered_map(const TPredict1& keySelector, const TPredict2& valueSelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
 		{
 			std::unordered_map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
@@ -893,8 +969,8 @@ namespace LL
 		}
 
 		//to unordered_map
-		template<typename TFunction>
-		auto to_unordered_map(const TFunction& keySelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement>())
+		template<typename TPredict>
+		auto to_unordered_map(const TPredict& keySelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement>())
 		{
 			std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
@@ -913,6 +989,136 @@ namespace LL
 				iterators::cast_iter<TIterator, TResult>(end_, end_)
 				);
 		}
+
+		//concat
+		template<typename TIterator2>
+		Queryable<iterators::concat_iter<TIterator, TIterator2>> concat(const Queryable<TIterator2>& iter2) const
+		{
+			return Queryable<iterators::concat_iter<TIterator, TIterator2>>(
+				iterators::concat_iter<TIterator, TIterator2>(begin_, end_, iter2.begin(), iter2.end()),
+				iterators::concat_iter<TIterator, TIterator2>(end_, end_, iter2.end(), iter2.end())
+				);
+		}
+		//contains
+		bool contains(const TElement& item) const
+		{
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				if (*iter == item) return true;
+			}
+			return false;
+		}
+		//first without parameter
+		TElement first() const
+		{
+			if (empty()) throw linq_exception("empty collection");
+			return *begin_;
+		}
+
+		//first with parameter
+		template<typename TPredict>
+		TElement first(const TPredict& func) const
+		{
+			if (empty()) throw linq_exception("empty collection");
+			auto iter = begin_;
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				if (func(*iter)) return *iter;
+			}
+			throw linq_exception("Not found");
+		}
+
+		//last without parameter
+		TElement last() const
+		{
+			if (empty()) throw linq_exception("empty collection");
+			TElement ret{};
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				ret = *iter;
+			}
+			return ret;
+		}
+
+		//last with parameter
+		template<typename TPredict>
+		TElement last(const TPredict& func) const
+		{
+			if (empty()) throw linq_exception("empty collection");
+			TElement ret{};
+			std::vector<TElement> v;
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				if (func(*iter)) v.pushback(*iter);
+			}
+			if(v.empty()) throw linq_exception("Not found");
+			return v.back();
+		}
+
+		//first_or_default without parameter
+		TElement first_or_default() const
+		{
+			if (empty()) return TElement{};
+			return *begin_;
+		}
+
+		//first_or_default with parameter
+		template<typename TPredict>
+		TElement first_or_default(const TPredict& func) const
+		{
+			if (empty()) return TElement{};
+			auto iter = begin_;
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				if (func(*iter)) return *iter;
+			}
+			return TElement{};
+		}
+
+		//last_or_default without parameter
+		TElement last_or_default() const
+		{
+			TElement ret{};
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				ret = *iter;
+			}
+			return ret;
+		}
+
+		//last_or_default with parameter
+		template<typename TPredict>
+		TElement last_or_default(const TPredict& func) const
+		{
+			TElement ret{};
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				if (func(*iter)) ret = *iter;
+			}
+			return ret;
+		}
+		//empty
+		inline bool empty() const
+		{
+			return begin_ == end_;
+		}
+		//default_if_empty
+		Queryables<TElement> default_if_empty(const TElement& item) const
+		{
+			if (empty())
+			{
+				return Queryable<>
+			}
+			else
+			{
+				return *this;
+			}
+		}
+		//element_at
+		//element_at_or_default
+		//distinct
+		//except
+		//intersect
 
 	};
 }
