@@ -582,7 +582,7 @@ namespace LL
 				{
 					++current2_;
 				}
-				
+
 				return *this;
 			}
 
@@ -617,6 +617,53 @@ namespace LL
 				return current2_ != iter.current2_;
 			}
 		};
+
+		template<typename TValue>
+		class default_iterator
+		{
+			typedef default_iterator<TValue> TSelf;
+		private:
+			std::shared_ptr<std::vector<TValue>> values_;
+			typename std::vector<TValue>::iterator current_;
+			typename std::vector<TValue>::iterator end_;
+
+		public:
+			default_iterator() = default;
+			default_iterator(const std::shared_ptr<std::vector<TValue>& values)
+			:values_(values), current_(values->begin()), end_(values->end())
+			{
+
+			}
+
+			TSelf& operator++()
+			{
+				++current_;
+				return *this;
+			}
+
+			const TSelf operator++(int)
+			{
+				TSelf self = *this;
+				++current_;
+				return self;
+			}
+
+			auto operator*() const -> decltype(*current_)
+			{
+				return *current_;
+			}
+
+			bool operator==(const TSelf& iter) const
+			{
+				return current_ == iter.current_;
+			}
+
+			bool operator!=(const TSelf& iter) const
+			{
+				return current_ != iter.current_;
+			}
+		}
+
 	}
 
 	namespace iterators
@@ -651,6 +698,8 @@ namespace LL
 		template<typename TIterator1, typename TIterator2>
 		using concat_iter = concat_iterator<TIterator1, TIterator2>;
 
+		template<typename TValue>
+		using default_iter = default_iterator<TValue>
 	}
 
 	template<typename TIterator>
@@ -672,9 +721,13 @@ namespace LL
 	}
 
 	template<typename TValue>
-	constexpr auto from_value(const TValue& value)
+	constexpr Queryables<TValue> from_value(const TValue& value)
 	{
-
+		auto p = std::make_shared<std::vector<TValue>>();
+		p->push_back(value);
+		return Queryable<iterators::default_iter<TValue>>(
+			iterators::default_iter<TValue>(value),
+			iterators::default_iter<TValue>(value)
 	}
 
 
@@ -686,7 +739,7 @@ namespace LL
 		TIterator begin_;
 		TIterator end_;
 	public:
-		constexpr Queryable(){}
+		constexpr Queryable() = default;
 		constexpr Queryable(const TIterator& begin, const TIterator& end)
 			:begin_(begin), end_(end){}
 
@@ -756,12 +809,12 @@ namespace LL
 			return *queryable;
 		}
 		//single_or_default without parameter
-		TElement single_or_default() const 
+		TElement single_or_default() const
 		{
 			auto it = begin_;
 			//empty, require TElement has a default constructor, TODO
 			if (it == end_) return TElement{};
-			
+
 			if (++it != end_) throw linq_exception("The collection should have only one value.");
 			return *begin_;
 		}
@@ -1102,12 +1155,25 @@ namespace LL
 		{
 			return begin_ == end_;
 		}
-		//default_if_empty
-		Queryables<TElement> default_if_empty(const TElement& item) const
+		//default_if_empty without parameter
+		Queryables<TElement> default_if_empty() const
 		{
 			if (empty())
 			{
-				return Queryable<>
+				return default_if_empty(TElement());
+			}
+			else
+			{
+				return *this;
+			}
+		}
+
+		//default_if_empty with parameter
+		Queryables<TElement> default_if_empty(const TElement& default_value) const
+		{
+			if (empty())
+			{
+				return from_value(default_value);
 			}
 			else
 			{
@@ -1115,10 +1181,38 @@ namespace LL
 			}
 		}
 		//element_at
+		TElement element_at(int index) const
+		{
+			if(index >= 0)
+			{
+				int count = 0;
+				for(auto iter = begin_; iter != end_; ++iter)
+				{
+					if(count == index) return *iter;
+					++count;
+				}
+			}
+			throw linq_exception("Index out of range");
+		}
 		//element_at_or_default
+		TElement element_at_or_default(int index) const
+		{
+			if(index >= 0)
+			{
+				int count = 0;
+				for(auto iter = begin_; iter != end_; ++iter)
+				{
+					if(count == index) return *iter;
+					++count;
+				}
+			}
+			return TElement{};
+		}
 		//distinct
 		//except
 		//intersect
+		//union
+		//join
 
 	};
 }
