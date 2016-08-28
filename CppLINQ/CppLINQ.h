@@ -618,56 +618,10 @@ namespace LL
 			}
 		};
 
-		template<typename TValue>
-		class value_iterator
-		{
-			typedef value_iterator<TValue> TSelf;
-		private:
-			std::shared_ptr<std::vector<TValue>> values_;
-			typename std::vector<TValue>::iterator current_;
-			typename std::vector<TValue>::iterator end_;
-
-		public:
-			value_iterator() = default;
-			value_iterator(const std::shared_ptr<std::vector<TValue>>& values)
-			:values_(values), current_(values->begin()), end_(values->end())
-			{
-
-			}
-
-			TSelf& operator++()
-			{
-				++current_;
-				return *this;
-			}
-
-			const TSelf operator++(int)
-			{
-				TSelf self = *this;
-				++current_;
-				return self;
-			}
-
-			auto operator*() const -> decltype(*current_)
-			{
-				return *current_;
-			}
-
-			bool operator==(const TSelf& iter) const
-			{
-				return current_ == iter.current_;
-			}
-
-			bool operator!=(const TSelf& iter) const
-			{
-				return current_ != iter.current_;
-			}
-		};
-
 		template<typename TContainerPointer>
-		class copy_iterator
+		class adapter_iterator
 		{
-			typedef copy_iterator<TContainerPointer> TSelf;
+			typedef adapter_iterator<TContainerPointer> TSelf;
 		private:
 			TContainerPointer p_;
 			using TContainerIterator = decltype(p_->begin());
@@ -675,8 +629,8 @@ namespace LL
 			TContainerIterator end_;
 
 		public:
-			copy_iterator() = default;
-			copy_iterator(const TContainerPointer& p, const TContainerIterator& current, const TContainerIterator& end)
+			adapter_iterator() = default;
+			adapter_iterator(const TContainerPointer& p, const TContainerIterator& current, const TContainerIterator& end)
 				:p_(p), current_(current), end_(end)
 			{
 
@@ -744,18 +698,12 @@ namespace LL
 		template<typename TIterator1, typename TIterator2>
 		using concat_iter = concat_iterator<TIterator1, TIterator2>;
 
-		template<typename TValue>
-		using value_iter = value_iterator<TValue>;
-
 		template<typename TContainerPointer>
-		using copy_iter = copy_iterator<TContainerPointer>;
+		using adapter_iter = adapter_iterator<TContainerPointer>;
 	}
 
 	template<typename TIterator>
 	class Queryable;
-
-	template<typename T>
-	class Queryables;
 
 	template <typename TIterator>
 	constexpr Queryable<TIterator> from(const TIterator& begin, const TIterator& end)
@@ -768,17 +716,6 @@ namespace LL
 	{
 		return Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container));
 	}
-
-	template<typename TValue>
-	constexpr Queryable<iterators::value_iter<TValue>> from_value(const TValue& value)
-	{
-		auto p = std::make_shared<std::vector<TValue>>();
-		p->push_back(value);
-		return Queryable<iterators::value_iter<TValue>>(
-			iterators::value_iter<TValue>(p),
-			iterators::value_iter<TValue>(p));
-	}
-
 
 	template<typename TIterator>
 	class Queryable
@@ -1215,29 +1152,30 @@ namespace LL
 			return begin_ == end_;
 		}
 		//default_if_empty without parameter
-		Queryables<TElement> default_if_empty() const
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> default_if_empty() const
 		{
-			if (empty())
-			{
-				return default_if_empty(TElement());
-			}
-			else
-			{
-				return *this;
-			}
+			return default_if_empty(TElement());
 		}
 
 		//default_if_empty with parameter
-		Queryables<TElement> default_if_empty(const TElement& default_value) const
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> default_if_empty(const TElement& default_value) const
 		{
+			auto p = std::make_shared<std::vector<TElement>>();
 			if (empty())
 			{
-				return from_value(default_value);
+				p->push_back(default_value);
 			}
 			else
 			{
-				return *this;
+				for (auto iter = begin_; iter != end_; ++iter)
+				{
+					p->push_back(*iter);
+				}
 			}
+			return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>>(
+				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(p, p->begin(), p->end()),
+				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(p, p->end(), p->end())
+				);
 		}
 		//element_at
 		TElement element_at(int index) const
@@ -1268,7 +1206,7 @@ namespace LL
 			return TElement{};
 		}
 		//distinct
-		Queryable<iterators::copy_iter<std::shared_ptr<std::set<TElement>>>> distinct() const
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>> distinct() const
 		{
 			if (empty()) throw linq_exception("Empty Collection");
 			auto set = std::make_shared<std::set<TElement>>();
@@ -1276,14 +1214,14 @@ namespace LL
 			{
 				set->insert(*iter);
 			}
-			return Queryable<iterators::copy_iter<std::shared_ptr<std::set<TElement>>>>(
-				iterators::copy_iter<std::shared_ptr<std::set<TElement>>>(set, set->begin(), set->end()),
-				iterators::copy_iter<std::shared_ptr<std::set<TElement>>>(set, set->end(), set->end())
+			return Queryable<iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>>(
+				iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>(set, set->begin(), set->end()),
+				iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>(set, set->end(), set->end())
 				);
 		}
 		//except
 		template<typename TIterator2>
-		Queryable<iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>> except(const Queryable<TIterator2>& q) const
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> except(const Queryable<TIterator2>& q) const
 		{
 			if(empty() || q.empty()) throw linq_exception("Empty Collection");
 			auto v = std::make_shared<std::vector<TElement>>();
@@ -1296,15 +1234,15 @@ namespace LL
 					v->push_back(*iter);
 				}
 			}
-			return Queryable<iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>>(
-				iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>(v, v->begin(), v->end()),
-				iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>(v, v->end(), v->end())
+			return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>>(
+				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->begin(), v->end()),
+				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->end(), v->end())
 				);
 
 		}
 		//intersect
 		template<typename TIterator2>
-		Queryable<iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>> intersect(const Queryable<TIterator2>& q) const
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> intersect(const Queryable<TIterator2>& q) const
 		{
 			if (empty() || q.empty()) throw linq_exception("Empty Collection");
 			auto v = std::make_shared<std::vector<TElement>>();
@@ -1316,15 +1254,15 @@ namespace LL
 					v->push_back(*iter);
 				}
 			}
-			return Queryable<iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>>(
-				iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>(v, v->begin(), v->end()),
-				iterators::copy_iter<std::shared_ptr<std::vector<TElement>>>(v, v->end(), v->end())
+			return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>>(
+				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->begin(), v->end()),
+				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->end(), v->end())
 				);
 		}
 		
 		//union, use linq_union to avoid key word union
 		template<typename TIterator2>
-		Queryable<iterators::copy_iter<std::shared_ptr<std::set<TElement>>>> linq_union(const Queryable<TIterator2>& q) const
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>> linq_union(const Queryable<TIterator2>& q) const
 		{
 			if (empty() || q.empty()) throw linq_exception("Empty Collection");
 			return concat(q).distinct();
