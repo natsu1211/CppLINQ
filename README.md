@@ -24,24 +24,24 @@ In development...
   - [x] all
   - [x] any
   - [x] average
-  - [ ] cast
-  - [ ] concat
-  - [ ] contains
+  - [x] cast (won't implement)
+  - [x] concat
+  - [x] contains
   - [x] count
-  - [ ] default_if_empty
-  - [ ] distinct
-  - [ ] element_at
-  - [ ] element_at_or_default
-  - [ ] except
-  - [ ] first
-  - [ ] first_or_default
+  - [x] default_if_empty
+  - [x] distinct
+  - [x] element_at
+  - [x] element_at_or_default
+  - [x] except
+  - [x] first
+  - [x] first_or_default
   - [ ] group_by
   - [ ] group_join
-  - [ ] intersect
+  - [x] intersect
   - [ ] join
-  - [ ] last
-  - [ ] last_or_default
-  - [ ] long_count
+  - [x] last
+  - [x] last_or_default
+  - [x] long_count
   - [x] max
   - [x] min
   - [ ] reverse
@@ -49,12 +49,12 @@ In development...
   - [ ] select_many
   - [x] sequence_equal
   - [x] single
-  - [ ] single_or_default
+  - [x] single_or_default
   - [x] skip
   - [x] skip_while
   - [x] sum
-  - [ ] to_contanier
-  - [ ] union
+  - [x] to_contanier
+  - [x] union
   - [x] where
   - [ ] zip
 - [ ] Optimization
