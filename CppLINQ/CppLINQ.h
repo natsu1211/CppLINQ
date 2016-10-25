@@ -235,7 +235,7 @@ namespace LL
 
 			bool operator==(const TSelf& iter) const
 			{
-				return current_ == iter.current_ && inner_index_ = iter.inner_index_;
+				return current_ == iter.current_ && inner_index_ == iter.inner_index_;
 			}
 
 			bool operator!=(const TSelf& iter) const
@@ -623,6 +623,67 @@ namespace LL
 				return current2_ != iter.current2_;
 			}
 		};
+        template<typename TIterator1, typename TIterator2>
+        class zip_iterator
+        {
+            typedef zip_iterator<TIterator1, TIterator2> TSelf;
+        private:
+            TIterator1 current1_;
+            TIterator1 end1_;
+            TIterator2 current2_;
+            TIterator2 end2_;
+			using TPair = std::pair<clean_type<decltype(*current1_)>, clean_type<decltype(*current2_)>>;
+			std::vector<TPair> pairs_;
+			size_t pair_index_;
+        public:
+            zip_iterator() = default;
+            zip_iterator(const TIterator1& current1, const TIterator1& end1, const TIterator2& current2, const TIterator2& end2)
+				:current1_(current1), end1_(end1), current2_(current2), end2_(end2), pair_index_(0)
+            {
+				auto c1 = current1;
+				auto c2 = current2;
+				while (c1 != end1_ && c2 != end2_)
+				{
+					pairs_.push_back(std::make_pair(*c1, *c2));
+					++c1;
+					++c2;
+				}
+				if (c1 != end1_ || c2 != end2_) throw linq_exception("The size of two sequence is not matched.");
+				
+            }
+			TSelf& operator++()
+			{
+				++pair_index_;
+				++current1_;
+				++current2_;
+				return *this;
+			}
+
+			const TSelf operator++(int)
+			{
+				TSelf self = *this;
+				++pair_index_;
+				++current1_;
+				++current2_;
+				return self;
+			}
+
+			TPair operator*() const
+			{
+				return pairs_[pair_index_];
+			}
+
+			bool operator==(const TSelf& iter) const
+			{
+				return current1_ == iter.current1_;
+			}
+
+			bool operator!=(const TSelf& iter) const
+			{
+				return current1_ != iter.current1_;
+			}
+
+		};
 
 		template<typename TContainerPointer>
 		class adapter_iterator
@@ -706,6 +767,9 @@ namespace LL
 
 		template<typename TContainerPointer>
 		using adapter_iter = adapter_iterator<TContainerPointer>;
+
+		template<typename TIterator1, typename TIterator2>
+		using zip_iter = zip_iterator<TIterator1, TIterator2>;
 	}
 
 	template<typename TIterator>
@@ -1271,6 +1335,13 @@ namespace LL
 		}
 		//join
 		//zip
+        template<typename TIterator2>
+		Queryable<iterators::zip_iter<TIterator, TIterator2>> zip(const Queryable<TIterator2>& q) const
+		{
+			return Queryable<iterators::zip_iter<TIterator, TIterator2>>(
+				iterators::zip_iter<TIterator, TIterator2>(begin_, end_, q.begin(), q.end()),
+				iterators::zip_iter<TIterator, TIterator2>(end_, end_, q.end(), q.end()));
+		}
 		//group_by
 		//group_join
 
