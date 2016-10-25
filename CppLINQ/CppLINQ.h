@@ -42,18 +42,6 @@ namespace LL
 	template<typename TIterator>
 	using value_type = decltype(**(TIterator*)0);
 
-	template<typename T, bool B = false>
-	struct default_type
-	{
-		typedef decltype(nullptr) type;
-	};
-
-	template<typename T>
-	struct default_type<T, true>
-	{
-		typedef typename T type;
-	};
-
 	namespace iterators
 	{
 		//filter, mutate
@@ -445,7 +433,7 @@ namespace LL
 				{
 					current_ = end_;
 				}
-				else if(current_ != end)
+				else if(current_ != end_)
 				{
 					++current_;
 				}
@@ -609,7 +597,7 @@ namespace LL
 				TSelf self = *this;
 				if (current1_ != end1_)
 				{
-					++current_1;
+					++current1_;
 				}
 				else if (current2_ != end2_)
 				{
@@ -971,7 +959,9 @@ namespace LL
 		{
 			auto end1 = this->end_;
 			auto end2 = seq.end_;
-			for(auto it1 = this->begin, it2 = seq.begin_; it1 != end1 && it2 != end2; ++it1, ++it2)
+            auto it1 = this->begin;
+            auto it2 = seq.begin_;
+			for (;it1 != end1 && it2 != end2; ++it1, ++it2)
 			{
 				if(*it1 != *it2) return false;
 			}
@@ -1019,7 +1009,7 @@ namespace LL
 		}
 		//to map
 		template<typename TPredict1, typename TPredict2>
-		auto to_map(const TPredict1& keySelector, const TPredict2& valueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), decltype(vaulueSelector(*(TElement*)0))>())
+		auto to_map(const TPredict1& keySelector, const TPredict2& valueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), decltype(valueSelector(*(TElement*)0))>())
 		{
 			std::map<decltype(keySelector(*(TElement*)0)), decltype(valueSelector(*(TElement*)0))> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
