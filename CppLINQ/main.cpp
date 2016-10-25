@@ -15,7 +15,7 @@ int main()
 		std::vector<int> num_;
 	};
 	std::vector<PetOwner> vp{ PetOwner("higa", std::vector<std::string>{std::string("scruffy"), std::string("sam")}, std::vector<int>{10,20,30}), PetOwner("ronen", std::vector<std::string>{std::string("walker"), std::string("sugar")}, std::vector<int>{40,50,60}) };
-	auto s = from(vp).select_many([](auto i) {return i.pets_; });
+	auto s = from(vp).select_many([](PetOwner i) {return i.pets_; });
 
 	std::vector<std::vector<int>> a{ std::vector<int>{1,2},std::vector<int>{4,5,6,7},std::vector<int>{8,10,11,12} };
 	std::vector<int> a1{ 1, 2, 3, 4, 5, 6 };
