@@ -1342,7 +1342,39 @@ namespace LL
 				iterators::zip_iter<TIterator, TIterator2>(begin_, end_, q.begin(), q.end()),
 				iterators::zip_iter<TIterator, TIterator2>(end_, end_, q.end(), q.end()));
 		}
+		//order_by
 		//group_by
+		template<typename TPredict>
+		auto group_by(const TPredict& keySelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<TElement>>>())
+		{
+			return group_by(keySelector, [](const TElement &ele) {return ele; });
+		}
+		//group_by with value selector
+		template<typename TPredict1, typename TPredict2>
+		auto group_by(const TPredict1& keySelector, const TPredict2& ValueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<decltype(ValueSelector(*(TElement*)0))>>>())
+		{
+			using TKey = decltype(keySelector(*(TElement*)0));
+			using TValue = std::vector<decltype(ValueSelector(*(TElement*)0))>;
+			using TValuePointer = std::shared_ptr<TValue>;
+			std::map<TKey, TValuePointer> map;
+			for (auto iter = begin_; iter != end_; ++iter)
+			{
+				auto value = ValueSelector(*iter);
+				auto key = keySelector(value);
+				auto iter2 = map.find(key);
+				if (iter2 == map.end())
+				{
+					auto pval = std::make_shared<TValue>();
+					pval->push_back(value);
+					map.insert(std::make_pair(key, pval));
+				}
+				else
+				{
+					iter2->second->push_back(value);
+				}
+			}
+			return map;
+		}
 		//group_join
 
 	};
