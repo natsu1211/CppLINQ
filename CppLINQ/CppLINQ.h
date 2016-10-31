@@ -787,6 +787,15 @@ namespace LL
 		return Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container));
 	}
 
+	template<typename TContainerPointer>
+	constexpr auto from_ptr(const TContainerPointer &p)
+	{
+		return Queryable<iterators::adapter_iter<TContainerPointer>>(
+			iterators::adapter_iter<TContainerPointer>(p, p->begin(), p->end()),
+			iterators::adapter_iter<TContainerPointer>(p, p->end(), p->end())
+			);
+	}
+
 	template<typename TIterator>
 	class Queryable
 	{
@@ -828,23 +837,7 @@ namespace LL
 				iterators::select_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
-
 		//select many
-		/*template<typename TPredict>
-		auto select_many(const TPredict& func) const -> decltype(Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<decltype(func(*begin_))>>>>())
-		{
-			if(empty()) throw linq_exception("Empty Collection");
-			using T = decltype(func(*begin_));
-			auto v = std::make_shared<std::vector<T>>();
-			for (auto iter = begin_; iter != end_; ++iter)
-			{
-				v->push_back(func(*iter));
-			}
-			return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<T>>>>(
-				iterators::adapter_iter<std::shared_ptr<std::vector<T>>>(v, v->begin(), v->end()),
-				iterators::adapter_iter<std::shared_ptr<std::vector<T>>>(v, v->end(), v->end())
-				);
-		}*/
 		template<typename TPredict>
 		Queryable<iterators::select_many_iter<TIterator, TPredict>> select_many(const TPredict& func) const
 		{
@@ -1333,7 +1326,7 @@ namespace LL
 			if (empty() || q.empty()) throw linq_exception("Empty Collection");
 			return concat(q).distinct();
 		}
-		//join
+		
 		//zip
         template<typename TIterator2>
 		Queryable<iterators::zip_iter<TIterator, TIterator2>> zip(const Queryable<TIterator2>& q) const
@@ -1343,38 +1336,56 @@ namespace LL
 				iterators::zip_iter<TIterator, TIterator2>(end_, end_, q.end(), q.end()));
 		}
 		//order_by
+		template<typename TPredict>
+		auto first_order_by(const TPredict& keySelector) const
+		{
+			using TKey = decltype(keySelector(*(TElement*)0));
+			using TValuePointer = std::shared_ptr<std::vector<TElement>>;
+			return from_ptr(group_by(keySelector)).select([](const std::pair<TKey, TValuePointer> &p) {return p.second; });
+		}
+		/*template<typename TPredict>
+		auto then_order_by(const TPredict& keySelector) const
+		{
+
+		}
+		template<typename TPredict>
+		auto order_by(const TPredict& keySelector) const
+		{
+
+		}*/
 		//group_by
 		template<typename TPredict>
-		auto group_by(const TPredict& keySelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<TElement>>>())
+		auto group_by(const TPredict& keySelector) const -> decltype(std::shared_ptr<std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<TElement>>>>())
 		{
 			return group_by(keySelector, [](const TElement &ele) {return ele; });
 		}
 		//group_by with value selector
 		template<typename TPredict1, typename TPredict2>
-		auto group_by(const TPredict1& keySelector, const TPredict2& ValueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<decltype(ValueSelector(*(TElement*)0))>>>())
+		auto group_by(const TPredict1& keySelector, const TPredict2& ValueSelector) const -> decltype(std::shared_ptr<std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<decltype(ValueSelector(*(TElement*)0))>>>>())
 		{
 			using TKey = decltype(keySelector(*(TElement*)0));
 			using TValue = std::vector<decltype(ValueSelector(*(TElement*)0))>;
 			using TValuePointer = std::shared_ptr<TValue>;
-			std::map<TKey, TValuePointer> map;
+			auto pmap = std::make_shared<std::map<TKey, TValuePointer>>();
 			for (auto iter = begin_; iter != end_; ++iter)
 			{
 				auto value = ValueSelector(*iter);
 				auto key = keySelector(value);
-				auto iter2 = map.find(key);
-				if (iter2 == map.end())
+				auto iter2 = pmap->find(key);
+				if (iter2 == pmap->end())
 				{
 					auto pval = std::make_shared<TValue>();
 					pval->push_back(value);
-					map.insert(std::make_pair(key, pval));
+					pmap->insert(std::make_pair(key, pval));
 				}
 				else
 				{
 					iter2->second->push_back(value);
 				}
 			}
-			return map;
+			return pmap;
 		}
+		//join
 		//group_join
 
 	};
