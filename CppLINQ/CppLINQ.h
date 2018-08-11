@@ -649,7 +649,7 @@ namespace LL
 					++c2;
 				}
 				if (c1 != end1_ || c2 != end2_) throw linq_exception("The size of two sequence is not matched.");
-				
+
             }
 			TSelf& operator++()
 			{
@@ -919,17 +919,29 @@ namespace LL
 				);
 		}
 		//aggregate
-		template<typename TPredict>
-		TElement aggregate(const TPredict& func) const
+		template<typename TInit, typename TPredict>
+		TElement aggregate(const TInit &init, const TPredict& func) const
 		{
 			if(empty()) throw linq_exception("Empty Collection");
-			TElement result = 0;
+			auto result = init;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
 				result = func(*iter, result);
 			}
 			return result;
 		}
+        template<typename TPredict>
+        TElement aggregate(const TPredict& func) const
+        {
+            if(empty()) throw linq_exception("Empty Collection");
+            auto iter = begin_;
+            auto result = *iter;
+            while(++iter != end_)
+            {
+                result = func(*iter, result);
+            }
+            return result;
+        }
 		//average with function
 		template<typename TPredict>
 		TElement average(const TPredict& func) const
@@ -1011,26 +1023,40 @@ namespace LL
 			return cnt;
 		}
 		//sequence equal
-		template<typename TIterator2>
-		bool sequence_equal(const Queryable<TIterator2> &seq) const
+		template<typename TList>
+		bool sequence_equal(const TList &seq) const
 		{
 			auto end1 = this->end_;
-			auto end2 = seq.end_;
-            auto it1 = this->begin;
-            auto it2 = seq.begin_;
+			auto end2 = std::end(seq);
+            auto it1 = this->begin_;
+            auto it2 = std::begin(seq);
 			for (;it1 != end1 && it2 != end2; ++it1, ++it2)
 			{
 				if(*it1 != *it2) return false;
 			}
 			return it1 == end1 && it2 == end2;
 		}
+
+        template<typename T>
+        bool sequence_equal(const std::initializer_list<T> &il) const
+        {
+            auto end1 = this->end();
+            auto end2 = std::end(il);
+            auto it1 = this->begin();
+            auto it2 = std::begin(il);
+            for (;it1 != end1 && it2 != end2; ++it1, ++it2)
+            {
+                if(*it1 != *it2) return false;
+            }
+            return it1 == end1 && it2 == end2;
+        }
 		//to vector
 		std::vector<TElement> to_vector() const
 		{
 			std::vector<TElement> vector;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
-				vector.push_back(*iter);
+				vector.emplace_back(*iter);
 			}
 			return vector;
 		}
@@ -1040,7 +1066,7 @@ namespace LL
 			std::list<TElement> list;
 			for (auto iter = begin_; iter != end_ ; ++iter)
 			{
-				list.push_back(*iter);
+				list.emplace_back(*iter);
 			}
 			return list;
 		}
@@ -1066,24 +1092,12 @@ namespace LL
 		}
 		//to map
 		template<typename TPredict1, typename TPredict2>
-		auto to_map(const TPredict1& keySelector, const TPredict2& valueSelector) const -> decltype(std::map<decltype(keySelector(*(TElement*)0)), decltype(valueSelector(*(TElement*)0))>())
+		auto to_map(const TPredict1& keySelector, const TPredict2& valueSelector) const -> std::map<decltype(keySelector(*begin_)), decltype(valueSelector(*begin_))>
 		{
-			std::map<decltype(keySelector(*(TElement*)0)), decltype(valueSelector(*(TElement*)0))> map;
+			std::map<decltype(keySelector(*begin_)), decltype(valueSelector(*begin_))> map;
 			for (auto iter = begin_; iter != end_ ; ++iter)
 			{
-				map.insert(std::make_pair<keySelector(*iter),valueSelector(*iter)>);
-			}
-			return map;
-		}
-
-		//to unordered_map
-		template<typename TPredict>
-		auto to_unordered_map(const TPredict& keySelector) const -> decltype(std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement>())
-		{
-			std::unordered_map<decltype(keySelector(*(TElement*)0)), TElement> map;
-			for (auto iter = begin_; iter != end_ ; ++iter)
-			{
-				map.insert(std::make_pair<keySelector(*iter),*iter>);
+				map.insert(std::make_pair(keySelector(*iter), valueSelector(*iter)));
 			}
 			return map;
 		}
@@ -1107,6 +1121,15 @@ namespace LL
 				iterators::concat_iter<TIterator, TIterator2>(end_, end_, iter2.end(), iter2.end())
 				);
 		}
+        template<typename TList>
+        auto concat(const TList& list) const -> Queryable<iterators::concat_iter<TIterator, decltype(std::begin(list))>>
+        {
+            using TIterator2 = decltype(std::begin(list));
+            return Queryable<iterators::concat_iter<TIterator, TIterator2>>(
+                iterators::concat_iter<TIterator, TIterator2>(begin_, end_, std::begin(list), std::end(list)),
+                iterators::concat_iter<TIterator, TIterator2>(end_, end_, std::end(list), std::end(list))
+                );
+        }
 		//contains
 		bool contains(const TElement& item) const
 		{
@@ -1326,7 +1349,7 @@ namespace LL
 			if (empty() || q.empty()) throw linq_exception("Empty Collection");
 			return concat(q).distinct();
 		}
-		
+
 		//zip
         template<typename TIterator2>
 		Queryable<iterators::zip_iter<TIterator, TIterator2>> zip(const Queryable<TIterator2>& q) const
@@ -1355,37 +1378,39 @@ namespace LL
 		}*/
 		//group_by
 		template<typename TPredict>
-		auto group_by(const TPredict& keySelector) const -> decltype(std::shared_ptr<std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<TElement>>>>())
+		auto group_by(const TPredict& keySelector) const
 		{
 			return group_by(keySelector, [](const TElement &ele) {return ele; });
 		}
 		//group_by with value selector
+        //nolazy, TODO
 		template<typename TPredict1, typename TPredict2>
-		auto group_by(const TPredict1& keySelector, const TPredict2& ValueSelector) const -> decltype(std::shared_ptr<std::map<decltype(keySelector(*(TElement*)0)), std::shared_ptr<std::vector<decltype(ValueSelector(*(TElement*)0))>>>>())
+		auto group_by(const TPredict1& keySelector, const TPredict2& ValueSelector) const -> std::vector<std::vector<decltype(ValueSelector(*(TElement*)0))>, std::vector<decltype(ValueSelector(*(TElement*)0))>>
 		{
 			using TKey = decltype(keySelector(*(TElement*)0));
 			using TValue = std::vector<decltype(ValueSelector(*(TElement*)0))>;
 			using TValuePointer = std::shared_ptr<TValue>;
-			auto pmap = std::make_shared<std::map<TKey, TValuePointer>>();
+            std::vector<TValue> v1;
+            std::vector<TValue> v2;
+            std::vector<std::vector<TValue>> vv;
+
 			for (auto iter = begin_; iter != end_; ++iter)
 			{
-				auto value = ValueSelector(*iter);
-				auto key = keySelector(value);
-				auto iter2 = pmap->find(key);
-				if (iter2 == pmap->end())
-				{
-					auto pval = std::make_shared<TValue>();
-					pval->push_back(value);
-					pmap->insert(std::make_pair(key, pval));
-				}
-				else
-				{
-					iter2->second->push_back(value);
-				}
+                if(keySelector(*iter))
+                {
+                    v1.emplace_back(ValueSelector(*iter));
+                }
+                else
+                {
+                    v2.emplace_back(ValueSelector(*iter));
+                }
 			}
-			return pmap;
+            vv.emplace_back(v1);
+            vv.emplace_back(v2);
+            return vv;
 		}
 		//join
+        //
 		//group_join
 
 	};
