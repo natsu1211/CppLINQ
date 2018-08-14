@@ -13,6 +13,7 @@
 #include <array>
 #include <utility>
 #include <exception>
+#include <iostream>
 
 namespace LL
 {
@@ -160,9 +161,6 @@ namespace LL
 			TPredict func_;
 			using TInner = decltype(func_(*current_));
 			TInner cur_;
-			// using TInnerIterator = decltype(std::begin(cur_));
-			// TInnerIterator inner_current_;
-			// TInnerIterator inner_end_;
 			size_t inner_index_;
 		public:
 
@@ -170,12 +168,6 @@ namespace LL
 			select_many_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
 				:current_(current), end_(end), func_(func), inner_index_(0)
 			{
-				// if (current_ != end_)
-				// {
-				// 	cur_ = func_(*current_);
-				// 	inner_current_ = std::begin(cur_);
-				// 	inner_end_ = std::end(cur_);
-				// }
 				if (current_ != end_)
 				{
 					cur_ = func_(*current_);
@@ -184,16 +176,7 @@ namespace LL
 
 			TSelf& operator++()
 			{
-				// if (++inner_current_ == inner_end_ && current_ != end_)
-				// {
-				// 	if (++current_ != end_)
-				// 	{
-				// 		cur_ = func_(*current_);
-				// 		inner_current_ = std::begin(cur_);
-				// 		inner_end_ = std::end(cur_);
-				// 	}
-				// }
-				if(++inner_index_ >= cur_.size())
+				if(++inner_index_ >= std::distance(std::begin(cur_), std::end(cur_)))
 				{
 				 	if (++current_ != end_)
 					{
@@ -207,17 +190,7 @@ namespace LL
 			const TSelf operator++(int)
 			{
 				TSelf self = *this;
-				/*
-				if (++inner_current_ == inner_end_ && current_ != end_)
-				{
-					if (++current_ != end_)
-					{
-						cur_ = func_(*current_);
-						inner_current_ = std::begin(cur_);
-						inner_end_ = std::end(cur_);
-					}
-				}*/
-				if(++inner_index_ >= cur_.size())
+                if(++inner_index_ >= std::distance(std::begin(cur_), std::end(cur_)))
 				{
 					if (++current_ != end_)
 					{
@@ -228,9 +201,9 @@ namespace LL
 				return self;
 			}
 
-			auto operator*() const -> decltype(cur_[inner_index_])
+			auto operator*() const -> decltype(*(std::begin(cur_) + inner_index_))
 			{
-				return cur_[inner_index_];
+				return *(std::begin(cur_) + inner_index_);
 			}
 
 			bool operator==(const TSelf& iter) const
@@ -243,6 +216,7 @@ namespace LL
 				return current_ != iter.current_ || inner_index_ != iter.inner_index_;
 			}
 		};
+
 		//single with parameter
 		template<typename TIterator, typename TPredict>
 		class single_iterator
@@ -517,50 +491,6 @@ namespace LL
 			}
 		};
 
-		template<typename TIterator, typename TResult>
-		class cast_iterator
-		{
-			typedef cast_iterator<TIterator, TResult> TSelf;
-		private:
-			TIterator current_;
-			TIterator end_;
-
-		public:
-			cast_iterator() = default;
-			cast_iterator(const TIterator& current, const TIterator& end)
-				:current_(current), end_(end)
-			{
-			}
-
-			TSelf& operator++()
-			{
-				++current_;
-				return *this;
-			}
-
-			const TSelf operator++(int)
-			{
-				TSelf self = *this;
-				++current_;
-				return self;
-			}
-
-			TResult operator*() const
-			{
-				return (TResult)(*current_);
-			}
-
-			bool operator==(const TSelf& iter) const
-			{
-				return current_ == iter.current_;
-			}
-
-			bool operator!=(const TSelf& iter) const
-			{
-				return current_ != iter.current_;
-			}
-		};
-
 		template<typename TIterator1, typename TIterator2>
 		class concat_iterator
 		{
@@ -645,11 +575,10 @@ namespace LL
 				while (c1 != end1_ && c2 != end2_)
 				{
 					pairs_.push_back(std::make_pair(*c1, *c2));
-					++c1;
-					++c2;
+                    ++c1;
+                    ++c2;
 				}
 				if (c1 != end1_ || c2 != end2_) throw linq_exception("The size of two sequence is not matched.");
-
             }
 			TSelf& operator++()
 			{
@@ -759,9 +688,6 @@ namespace LL
 		template<typename TIterator, typename TPredict>
 		using take_while_iter = take_while_iterator<TIterator, TPredict>;
 
-		template<typename TIterator, typename TResult>
-		using cast_iter = cast_iterator<TIterator, TResult>;
-
 		template<typename TIterator1, typename TIterator2>
 		using concat_iter = concat_iterator<TIterator1, TIterator2>;
 
@@ -787,14 +713,11 @@ namespace LL
 		return Queryable<decltype(std::begin(container))>(std::begin(container), std::end(container));
 	}
 
-	template<typename TContainerPointer>
-	constexpr auto from_ptr(const TContainerPointer &p)
-	{
-		return Queryable<iterators::adapter_iter<TContainerPointer>>(
-			iterators::adapter_iter<TContainerPointer>(p, p->begin(), p->end()),
-			iterators::adapter_iter<TContainerPointer>(p, p->end(), p->end())
-			);
-	}
+    template<typename T>
+    constexpr auto from(const std::initializer_list<T> &list) -> decltype(Queryable<decltype(std::begin(list))>(std::begin(list), std::end(list)))
+    {
+        return Queryable<decltype(std::begin(list))>(std::begin(list), std::end(list));
+    }
 
 	template<typename TIterator>
 	class Queryable
@@ -1101,17 +1024,6 @@ namespace LL
 			}
 			return map;
 		}
-
-		//cast
-		template<typename TResult>
-		Queryable<iterators::cast_iter<TIterator, TResult>> cast() const
-		{
-			return Queryable<iterators::cast_iter<TIterator, TResult>>(
-				iterators::cast_iter<TIterator, TResult>(begin_, end_),
-				iterators::cast_iter<TIterator, TResult>(end_, end_)
-				);
-		}
-
 		//concat
 		template<typename TIterator2>
 		Queryable<iterators::concat_iter<TIterator, TIterator2>> concat(const Queryable<TIterator2>& iter2) const
@@ -1302,9 +1214,10 @@ namespace LL
 				);
 		}
 		//except
-		template<typename TIterator2>
-		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> except(const Queryable<TIterator2>& q) const
+		template<typename TList>
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> except(const TList& l) const
 		{
+            auto q = from(l);
 			if(empty() || q.empty()) throw linq_exception("Empty Collection");
 			auto v = std::make_shared<std::vector<TElement>>();
 			std::set<TElement> set_ex(q.begin(), q.end());
@@ -1320,98 +1233,91 @@ namespace LL
 				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->begin(), v->end()),
 				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->end(), v->end())
 				);
-
 		}
 		//intersect
-		template<typename TIterator2>
-		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> intersect(const Queryable<TIterator2>& q) const
+		template<typename TList>
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>> intersect(const TList& l) const
 		{
+            auto q = from(l);
 			if (empty() || q.empty()) throw linq_exception("Empty Collection");
-			auto v = std::make_shared<std::vector<TElement>>();
-			std::set<TElement> set(q.begin(), q.end());
-			for (auto iter = begin_; iter != end_; ++iter)
-			{
-				if (!set.insert(*iter).second)
-				{
-					v->push_back(*iter);
-				}
-			}
+			auto v = std::make_shared<std::vector<TElement>>(std::distance(q.begin(), q.end()));
+            std::set<TElement> set1(begin_, end_);
+			std::set<TElement> set2(q.begin(), q.end());
+            auto it = std::set_intersection(set1.begin(), set1.end(), set2.begin(), set2.end(), v->begin());
+            v->resize(it-v->begin());
 			return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>>(
 				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->begin(), v->end()),
 				iterators::adapter_iter<std::shared_ptr<std::vector<TElement>>>(v, v->end(), v->end())
 				);
 		}
-
 		//union, use linq_union to avoid key word union
-		template<typename TIterator2>
-		Queryable<iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>> linq_union(const Queryable<TIterator2>& q) const
+		template<typename TList>
+		Queryable<iterators::adapter_iter<std::shared_ptr<std::set<TElement>>>> linq_union(const TList& l) const
 		{
+            auto q = from(l);
 			if (empty() || q.empty()) throw linq_exception("Empty Collection");
 			return concat(q).distinct();
 		}
-
 		//zip
-        template<typename TIterator2>
-		Queryable<iterators::zip_iter<TIterator, TIterator2>> zip(const Queryable<TIterator2>& q) const
+        template<typename TList>
+		auto zip(const TList& l) const ->Queryable<iterators::zip_iter<TIterator, decltype(std::begin(l))>> const
 		{
+            using TIterator2 = decltype(std::begin(l));
 			return Queryable<iterators::zip_iter<TIterator, TIterator2>>(
-				iterators::zip_iter<TIterator, TIterator2>(begin_, end_, q.begin(), q.end()),
-				iterators::zip_iter<TIterator, TIterator2>(end_, end_, q.end(), q.end()));
+				iterators::zip_iter<TIterator, TIterator2>(begin_, end_, std::begin(l), std::end(l)),
+				iterators::zip_iter<TIterator, TIterator2>(end_, end_, std::end(l), std::end(l)));
 		}
 		//order_by
-		template<typename TPredict>
-		auto first_order_by(const TPredict& keySelector) const
-		{
-			using TKey = decltype(keySelector(*(TElement*)0));
-			using TValuePointer = std::shared_ptr<std::vector<TElement>>;
-			return from_ptr(group_by(keySelector)).select([](const std::pair<TKey, TValuePointer> &p) {return p.second; });
-		}
-		/*template<typename TPredict>
-		auto then_order_by(const TPredict& keySelector) const
-		{
-
-		}
-		template<typename TPredict>
-		auto order_by(const TPredict& keySelector) const
-		{
-
-		}*/
+        template<typename TPredict>
+        auto order_by(const TPredict& keySelector) const
+        {
+            using TKey = decltype(keySelector(*(TElement*)0));
+            return flatten(group_by(keySelector)).select([](const TElement &v) {return v;});
+        }
 		//group_by
 		template<typename TPredict>
-		auto group_by(const TPredict& keySelector) const
+		auto group_by(const TPredict& keySelector) const -> std::vector<std::vector<TElement>> const
 		{
 			return group_by(keySelector, [](const TElement &ele) {return ele; });
 		}
 		//group_by with value selector
-        //nolazy, TODO
 		template<typename TPredict1, typename TPredict2>
-		auto group_by(const TPredict1& keySelector, const TPredict2& ValueSelector) const -> std::vector<std::vector<decltype(ValueSelector(*(TElement*)0))>, std::vector<decltype(ValueSelector(*(TElement*)0))>>
+		auto group_by(const TPredict1& keySelector, const TPredict2& valueSelector) const -> std::vector<std::vector<decltype(valueSelector(*(TElement*)0))>> const
 		{
 			using TKey = decltype(keySelector(*(TElement*)0));
-			using TValue = std::vector<decltype(ValueSelector(*(TElement*)0))>;
-			using TValuePointer = std::shared_ptr<TValue>;
-            std::vector<TValue> v1;
-            std::vector<TValue> v2;
+			using TValue = decltype(valueSelector(*(TElement*)0));
             std::vector<std::vector<TValue>> vv;
+            std::map<TKey, std::vector<TValue>> m;
 
 			for (auto iter = begin_; iter != end_; ++iter)
 			{
-                if(keySelector(*iter))
+                auto key = keySelector(*iter);
+                auto value = valueSelector(*iter);
+                if(m.find(key) != m.end())
                 {
-                    v1.emplace_back(ValueSelector(*iter));
+                    auto &v = m[key];
+                    v.emplace_back(value);
                 }
                 else
                 {
-                    v2.emplace_back(ValueSelector(*iter));
+                    std::vector<TValue> v;
+                    v.emplace_back(value);
+                    m.insert(std::make_pair(key, v));
                 }
 			}
-            vv.emplace_back(v1);
-            vv.emplace_back(v2);
+            for(auto& p : m)
+            {
+                vv.push_back(p.second);
+            }
             return vv;
 		}
 		//join
         //
 		//group_join
-
+        //helper, flatten lists, lazy
+        auto flatten(const std::vector<std::vector<TElement>> &vv) const
+        {
+            return from(vv).select_many([](const std::vector<TElement> &v){return from(v);});
+        }
 	};
 }
