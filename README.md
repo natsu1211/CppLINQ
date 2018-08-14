@@ -41,4 +41,4 @@ In development...
   - [x] to_contanier
   - [x] union
   - [x] where
-  - [ ] zip
+  - [x] zip
