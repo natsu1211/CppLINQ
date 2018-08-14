@@ -60,14 +60,6 @@ void test()
 		assert(from(xs).select([](int x){return x * 2; }).sequence_equal({ 2, 4, 6, 8, 10 }));
 	}
 	//////////////////////////////////////////////////////////////////
-	// hide type test
-	//////////////////////////////////////////////////////////////////
-	{
-		//int xs[] = { 1, 2, 3, 4, 5 };
-		//linq<int> hidden = from(xs).select([](int x){return x * 2; });
-		//assert(hidden.sequence_equal({ 2, 4, 6, 8, 10 }));
-	}
-	//////////////////////////////////////////////////////////////////
 	// where
 	//////////////////////////////////////////////////////////////////
 	{
@@ -108,16 +100,7 @@ void test()
 		int e[] = { 1, 2, 3, 4, 5, 6 };
 		int f[] = { 6, 7, 8, 9, 10 };
 		int g[] = { 0 };
-		//linq<int> xs[] = { from(b), from(c), from(d), from(e), from(f) };
-
-		//assert(from(a).sequence_equal(b));
-		//for (auto& x : xs)
-		//{
-			//for (auto& y : xs)
-			//{
-				//assert(x.sequence_equal(y) == (&x == &y));
-			//}
-		//}
+		assert(from(a).sequence_equal(b));
 
 		assert(from(a).contains(1));
 		assert(from(a).contains(5));
@@ -209,9 +192,9 @@ void test()
 		int ys[] = { 2, 2, 3, 3, 4, 4 };
 		assert(from(xs).distinct().sequence_equal({ 1, 2, 3 }));
 		assert(from(ys).distinct().sequence_equal({ 2, 3, 4 }));
-		//assert(from(xs).except_with(ys).sequence_equal({ 1 }));
-		//assert(from(xs).intersect_with(ys).sequence_equal({ 2, 3 }));
-		//assert(from(xs).union_with(ys).sequence_equal({ 1, 2, 3, 4 }));
+		assert(from(xs).except(ys).sequence_equal({ 1 }));
+		assert(from(xs).intersect(ys).sequence_equal({ 2, 3 }));
+		assert(from(xs).linq_union(ys).sequence_equal({ 1, 2, 3, 4 }));
 	}
 	//////////////////////////////////////////////////////////////////
 	// restructuring
@@ -220,37 +203,44 @@ void test()
 		int xs[] = { 1, 2, 3, 4, 5 };
 		int ys[] = { 6, 7, 8, 9, 10 };
 
-		//zip_pair<int, int> zs[] = { { 1, 6 }, { 2, 7 }, { 3, 8 }, { 4, 9 }, { 5, 10 } };
-		//assert(from(xs).zip_with(ys).sequence_equal(zs));
+        std::pair<int, int> zs[] = { { 1, 6 }, { 2, 7 }, { 3, 8 }, { 4, 9 }, { 5, 10 } };
+		assert(from(xs).zip(ys).sequence_equal(zs));
 
-		//auto g = from(xs).group_by([](int x){return x % 2; });
-		//assert(g.select([](zip_pair<int, linq<int>> p){return p.first; }).sequence_equal({ 0, 1 }));
-		//assert(g.first().second.sequence_equal({ 2, 4 }));
-		//assert(g.last().second.sequence_equal({ 1, 3, 5 }));
+		auto g = from(xs).group_by([](int x){return x % 2; });
+		assert(from(g[0]).sequence_equal({ 2, 4 }));
+		assert(from(g[1]).sequence_equal({ 1, 3, 5 }));
 
-		//assert(
-			//from_values({ 1, 2, 3 })
-			//.select_many([](int x){return from_values({ x, x*x, x*x*x }); })
-			//.sequence_equal({ 1, 1, 1, 2, 4, 8, 3, 9, 27 })
-			//);
+		assert(
+            from({ 1, 2, 3 })
+            .select_many([](int x){return from({x*x});})
+            .sequence_equal({ 1, 4, 9 })
+        );
+
+        assert(
+            from({ 1, 2, 3 })
+            .select_many([](int x){return from({x, x*x, x*x*x});})
+            .sequence_equal({ 1, 1, 1, 2, 4, 8, 3, 9, 27 })
+        );
 	}
 	//////////////////////////////////////////////////////////////////
 	// ordering
 	//////////////////////////////////////////////////////////////////
 	{
-		//int xs[] = { 7, 1, 12, 2, 8, 3, 11, 4, 9, 5, 13, 6, 10 };
-		//int ys[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
-		//int zs[] = { 10, 1, 11, 2, 12, 3, 13, 4, 5, 6, 7, 8, 9 };
+        int xs[] = { 7, 1, 12, 2, 8, 3, 11, 4, 9, 5, 13, 6, 10 };
+        int ys[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
+        int zs[] = { 10, 1, 11, 2, 12, 3, 13, 4, 5, 6, 7, 8, 9 };
 
-		//assert(from(xs).order_by([](int x){return x; }).sequence_equal(ys));
-		//assert(
-			//flatten(
-				//from(xs)
-				//.first_order_by([](int x){return x % 10; })
-				//.then_order_by([](int x){return x / 10; })
-				//)
-			//.sequence_equal(zs)
-			//);
+        for(auto a : from(xs).order_by([](int x){return x; }))
+        {
+            std::cout << a << std::endl;
+        }
+
+        assert(from(xs).order_by([](int x){return x; }).sequence_equal(ys));
+        assert(from(xs)
+                .order_by([](int x){return x % 10; })
+                .order_by([](int x){return x / 10; })
+                .sequence_equal(zs)
+              );
 	}
 	//////////////////////////////////////////////////////////////////
 	// joining
@@ -340,14 +330,15 @@ int main()
     }
 
     {
-        std::vector<PetOwner> vp{ PetOwner("higa", std::vector<std::string>{std::string("scruffy"), std::string("sam")}, std::vector<int>{10,20,30}), PetOwner("ronen", std::vector<std::string>{std::string("walker"), std::string("sugar")}, std::vector<int>{40,50,60}) };
-        auto xs = from(vp).select_many([](PetOwner i) {return i.pets_; });
+        // select pets'name owned to higa
+        std::vector<PetOwner> vp{ PetOwner("higa", std::vector<std::string>{std::string("scruffy"), std::string("sam")}, std::vector<int>{10,20,30}), 
+            PetOwner("ronen", std::vector<std::string>{std::string("walker"), std::string("sugar")}, std::vector<int>{40,50,60}) };
+        auto xs = from(vp).where([&](PetOwner po){return po.name_ == "higa";}).select_many([&](PetOwner i) {return i.pets_; });
         for (auto ele : xs)
         {
             std::cout << ele << std::endl;
         }
-        std::vector<std::string> result {"scruffy", "sam", "walker", "sugar"};
-        assert(xs.to_vector() == result);
+        assert(xs.sequence_equal({"scruffy", "sam"}));
     }
 
 #ifdef _MSC_VER
