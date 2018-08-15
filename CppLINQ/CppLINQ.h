@@ -45,6 +45,117 @@ namespace LL
 
 	namespace iterators
 	{
+        //empty type
+        template<typename T>
+		class empty_iterator
+		{
+			typedef empty_iterator<T> TSelf;
+		public:
+			empty_iterator() = default;
+
+			TSelf& operator++()
+			{
+				return *this;
+			}
+
+			TSelf operator++(int)
+			{
+				return *this;
+			}
+
+			T operator*()const
+			{
+				throw linq_exception("Failed to get a value from an empty collection.");
+			}
+
+			bool operator==(const TSelf& it)const
+			{
+				return true;
+			}
+
+			bool operator!=(const TSelf& it)const
+			{
+				return false;
+			}
+		};
+        //any type 
+        template<typename T>
+        class any_type_iterator
+        {
+            private:
+                class iterator_holder_base
+                {
+                    typedef iterator_holder_base TSelf;
+                    public:
+                        virtual std::shared_ptr<TSelf> next() = 0;
+                        virtual T deref() = 0;
+                        virtual bool equals(const std::shared_ptr<TSelf>& p) = 0;
+                };
+
+                template<typename TIterator>
+                class iterator_holder_impl : public iterator_holder_base
+                {
+                    typedef iterator_holder_impl<TIterator> TSelf;
+                    private:
+                        TIterator iter_;
+                    public:
+                        iterator_holder_impl(const TIterator &iter)
+                        {
+                            iter_ = iter;
+                        }
+                        std::shared_ptr<iterator_holder_base> next()
+                        {
+                            auto t = iter_;
+                            ++t;
+                            return std::make_shared<TSelf>(t);
+                        }
+                        T deref()
+                        {
+                            return *iter_;
+                        }
+                        bool equals(const std::shared_ptr<iterator_holder_base>& p)
+                        {
+                            auto impl = std::dynamic_pointer_cast<TSelf>(p);
+                            return impl && (iter_ == impl->iter_);
+                        }
+                };
+                typedef any_type_iterator<T> TSelf;
+                std::shared_ptr<iterator_holder_base> iterator_;
+            public:
+                any_type_iterator() = default;
+                template<typename TIterator>
+                any_type_iterator(const TIterator& iter):
+                        iterator_(std::make_shared<iterator_holder_impl<TIterator>>(iter))
+                {
+                }
+                TSelf& operator++()
+                {
+                    iterator_ = iterator_->next();
+                    return *this;
+                }
+
+                TSelf operator++(int)
+                {
+                    TSelf t = *this;
+                    iterator_ = iterator_->next();
+                    return t;
+                }
+
+                T operator*()const
+                {
+                    return iterator_->deref();
+                }
+
+                bool operator==(const TSelf& it)const
+                {
+                    return iterator_->equals(it.iterator_);
+                }
+
+                bool operator!=(const TSelf& it)const
+                {
+                    return !(iterator_->equals(it.iterator_));
+                }
+        };
 		//filter, mutate
 		template<typename TIterator, typename TPredict>
 		class where_iterator
@@ -148,72 +259,6 @@ namespace LL
 			bool operator!=(const TSelf& iter) const
 			{
 				return current_ != iter.current_;
-			}
-		};
-		//select many
-		template<typename TIterator, typename TPredict>
-		class select_many_iterator
-		{
-		private:
-			using TSelf = select_many_iterator<TIterator, TPredict>;
-			TIterator current_;
-			TIterator end_;
-			TPredict func_;
-			using TInner = decltype(func_(*current_));
-			TInner cur_;
-			size_t inner_index_;
-		public:
-
-			select_many_iterator() = default;
-			select_many_iterator(const TIterator& current, const TIterator& end, const TPredict& func)
-				:current_(current), end_(end), func_(func), inner_index_(0)
-			{
-				if (current_ != end_)
-				{
-					cur_ = func_(*current_);
-				}
-			}
-
-			TSelf& operator++()
-			{
-				if(++inner_index_ >= std::distance(std::begin(cur_), std::end(cur_)))
-				{
-				 	if (++current_ != end_)
-					{
-						cur_ = func_(*current_);
-					}
-					inner_index_ = 0;
-				}
-				return *this;
-			}
-
-			const TSelf operator++(int)
-			{
-				TSelf self = *this;
-                if(++inner_index_ >= std::distance(std::begin(cur_), std::end(cur_)))
-				{
-					if (++current_ != end_)
-					{
-						cur_ = func_(*current_);
-					}
-					inner_index_ = 0;
-				}
-				return self;
-			}
-
-			auto operator*() const -> decltype(*(std::begin(cur_) + inner_index_))
-			{
-				return *(std::begin(cur_) + inner_index_);
-			}
-
-			bool operator==(const TSelf& iter) const
-			{
-				return current_ == iter.current_ && inner_index_ == iter.inner_index_;
-			}
-
-			bool operator!=(const TSelf& iter) const
-			{
-				return current_ != iter.current_ || inner_index_ != iter.inner_index_;
 			}
 		};
 
@@ -671,9 +716,6 @@ namespace LL
 		using select_iter = select_iterator<TIterator, TPredict>;
 
 		template<typename TIterator, typename TPredict>
-		using select_many_iter = select_many_iterator<TIterator, TPredict>;
-
-		template<typename TIterator, typename TPredict>
 		using single_iter = single_iterator<TIterator, TPredict>;
 
 		template<typename TIterator>
@@ -696,10 +738,32 @@ namespace LL
 
 		template<typename TIterator1, typename TIterator2>
 		using zip_iter = zip_iterator<TIterator1, TIterator2>;
+
+        template<typename TIterator>
+        using any_type_iter = any_type_iterator<TIterator>;
+
+        template<typename TIterator>
+        using empty_iter = empty_iterator<TIterator>;
 	}
 
 	template<typename TIterator>
 	class Queryable;
+
+    template<typename T>
+    class linq : public Queryable<iterators::any_type_iter<T>>
+    {
+    public:
+        linq() = default;
+
+        template<typename TIterator>
+        linq(const Queryable<TIterator>& e)
+            :Queryable<iterators::any_type_iter<T>>(
+            iterators::any_type_iter<T>(e.begin()),
+            iterators::any_type_iter<T>(e.end())
+            )
+        {
+        }
+    };
 
 	template <typename TIterator>
 	constexpr Queryable<TIterator> from(const TIterator& begin, const TIterator& end)
@@ -718,6 +782,37 @@ namespace LL
     {
         return Queryable<decltype(std::begin(list))>(std::begin(list), std::end(list));
     }
+
+    template<typename TContainer>
+    constexpr auto from_values(const TContainer &container)
+    {
+        using TEle = clean_type<decltype(*std::begin(container))>;
+        std::shared_ptr<std::vector<TEle>> p = std::make_shared<std::vector<TEle>>(std::begin(container), std::end(container));
+        return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TEle>>>>(
+                iterators::adapter_iter<std::shared_ptr<std::vector<TEle>>>(p, p->begin(), p->end()),
+                iterators::adapter_iter<std::shared_ptr<std::vector<TEle>>>(p, p->end(), p->end())
+                );
+    }
+
+    template<typename T>
+    constexpr auto from_values(const std::initializer_list<T> &list)
+    {
+        using TEle = clean_type<decltype(*std::begin(list))>;
+        std::shared_ptr<std::vector<TEle>> p = std::make_shared<std::vector<TEle>>(std::begin(list), std::end(list));
+        return Queryable<iterators::adapter_iter<std::shared_ptr<std::vector<TEle>>>>(
+                iterators::adapter_iter<std::shared_ptr<std::vector<TEle>>>(p, p->begin(), p->end()),
+                iterators::adapter_iter<std::shared_ptr<std::vector<TEle>>>(p, p->end(), p->end())
+                );
+    }
+
+    template<typename TElement>
+	linq<TElement> from_empty()
+	{
+		return Queryable<iterators::empty_iter<TElement>>(
+			iterators::empty_iter<TElement>(),
+			iterators::empty_iter<TElement>()
+			);
+	}
 
 	template<typename TIterator>
 	class Queryable
@@ -760,15 +855,14 @@ namespace LL
 				iterators::select_iter<TIterator, TPredict>(end_, end_, func)
 				);
 		}
-		//select many
-		template<typename TPredict>
-		Queryable<iterators::select_many_iter<TIterator, TPredict>> select_many(const TPredict& func) const
-		{
-			return Queryable<iterators::select_many_iter<TIterator, TPredict>>(
-				iterators::select_many_iter<TIterator, TPredict>(begin_, end_, func),
-				iterators::select_many_iter<TIterator, TPredict>(end_, end_, func)
-				);
-		}
+        //select_many
+        template<typename TPredict>
+        auto select_many(const TPredict& func) const ->linq<clean_type<decltype(*func(*(TElement*)0).begin())>>
+        {
+            typedef decltype(func(*(TElement*)0)) TCollection;
+            typedef clean_type<decltype(*func(*(TElement*)0).begin())> TValue;
+            return select(func).aggregate(from_empty<TValue>(), [](const linq<TValue> &e1, const TCollection &e2){return e1.concat(e2);});
+        }
 		//single without parameter
 		TElement single() const
 		{
@@ -801,7 +895,7 @@ namespace LL
 		TElement single_or_default() const
 		{
 			auto it = begin_;
-			//empty, require TElement has a default constructor, TODO
+			//empty
 			if (it == end_) return TElement{};
 
 			if (++it != end_) throw linq_exception("The collection should have only one value.");
@@ -843,13 +937,13 @@ namespace LL
 		}
 		//aggregate
 		template<typename TInit, typename TPredict>
-		TElement aggregate(const TInit &init, const TPredict& func) const
+		TInit aggregate(const TInit &init, const TPredict& func) const
 		{
 			if(empty()) throw linq_exception("Empty Collection");
 			auto result = init;
 			for(auto iter = begin_; iter != end_; ++iter)
 			{
-				result = func(*iter, result);
+				result = func(result, *iter);
 			}
 			return result;
 		}
@@ -861,7 +955,7 @@ namespace LL
             auto result = *iter;
             while(++iter != end_)
             {
-                result = func(*iter, result);
+                result = func(result, *iter);
             }
             return result;
         }
@@ -949,9 +1043,9 @@ namespace LL
 		template<typename TList>
 		bool sequence_equal(const TList &seq) const
 		{
-			auto end1 = this->end_;
+			auto end1 = this->end();
 			auto end2 = std::end(seq);
-            auto it1 = this->begin_;
+            auto it1 = this->begin();
             auto it2 = std::begin(seq);
 			for (;it1 != end1 && it2 != end2; ++it1, ++it2)
 			{
@@ -1272,7 +1366,8 @@ namespace LL
         auto order_by(const TPredict& keySelector) const
         {
             using TKey = decltype(keySelector(*(TElement*)0));
-            return flatten(group_by(keySelector)).select([](const TElement &v) {return v;});
+            auto g = group_by(keySelector);
+            return from_values(g).select_many([](const std::vector<TElement> &v) {return v;});
         }
 		//group_by
 		template<typename TPredict>
@@ -1296,12 +1391,12 @@ namespace LL
                 if(m.find(key) != m.end())
                 {
                     auto &v = m[key];
-                    v.emplace_back(value);
+                    v.push_back(value);
                 }
                 else
                 {
                     std::vector<TValue> v;
-                    v.emplace_back(value);
+                    v.push_back(value);
                     m.insert(std::make_pair(key, v));
                 }
 			}
@@ -1312,12 +1407,6 @@ namespace LL
             return vv;
 		}
 		//join
-        //
 		//group_join
-        //helper, flatten lists, lazy
-        auto flatten(const std::vector<std::vector<TElement>> &vv) const
-        {
-            return from(vv).select_many([](const std::vector<TElement> &v){return from(v);});
-        }
 	};
 }

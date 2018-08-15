@@ -210,15 +210,15 @@ void test()
 		assert(from(g[0]).sequence_equal({ 2, 4 }));
 		assert(from(g[1]).sequence_equal({ 1, 3, 5 }));
 
-		assert(
+        assert(
             from({ 1, 2, 3 })
-            .select_many([](int x){return from({x*x});})
+            .select_many([](int x){return from_values({x*x});})
             .sequence_equal({ 1, 4, 9 })
         );
 
         assert(
             from({ 1, 2, 3 })
-            .select_many([](int x){return from({x, x*x, x*x*x});})
+            .select_many([](int x){return from_values({x, x*x, x*x*x});})
             .sequence_equal({ 1, 1, 1, 2, 4, 8, 3, 9, 27 })
         );
 	}
@@ -230,15 +230,9 @@ void test()
         int ys[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
         int zs[] = { 10, 1, 11, 2, 12, 3, 13, 4, 5, 6, 7, 8, 9 };
 
-        for(auto a : from(xs).order_by([](int x){return x; }))
-        {
-            std::cout << a << std::endl;
-        }
-
         assert(from(xs).order_by([](int x){return x; }).sequence_equal(ys));
         assert(from(xs)
-                .order_by([](int x){return x % 10; })
-                .order_by([](int x){return x / 10; })
+                .order_by([](int x){return x / 2; })
                 .sequence_equal(zs)
               );
 	}
@@ -298,15 +292,10 @@ void test()
             //assert(xs[1].second.second.name == boots.name);
             //assert(xs[2].second.second.name == daisy.name);
             //assert(xs[3].second.second.name == whiskers.name);
-        }
+    }
 
-}
-
-int main()
-{
-    test();
+    // calculate sum of squares of odd numbers
     {
-        // calculate sum of squares of odd numbers
         int xs[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         int sum = from(xs)
             .where([](int x){return x % 2 == 1; })
@@ -316,8 +305,8 @@ int main()
         assert(sum == 165);
     }
 
+    // iterate of squares of odd numbers ordered by the last digit
     {
-        // iterate of squares of odd numbers ordered by the last digit
         std::vector<int> xs = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         for (auto x : from(xs)
                 .where([](int x){return x % 2 == 1; })
@@ -329,8 +318,8 @@ int main()
         // prints 1 81 25 9 49
     }
 
+    // select pets'name owned to higa
     {
-        // select pets'name owned to higa
         std::vector<PetOwner> vp{ PetOwner("higa", std::vector<std::string>{std::string("scruffy"), std::string("sam")}, std::vector<int>{10,20,30}), 
             PetOwner("ronen", std::vector<std::string>{std::string("walker"), std::string("sugar")}, std::vector<int>{40,50,60}) };
         auto xs = from(vp).where([&](PetOwner po){return po.name_ == "higa";}).select_many([&](PetOwner i) {return i.pets_; });
@@ -340,6 +329,12 @@ int main()
         }
         assert(xs.sequence_equal({"scruffy", "sam"}));
     }
+
+}
+
+int main()
+{
+    test();
 
 #ifdef _MSC_VER
     _CrtDumpMemoryLeaks();
